@@ -176,17 +176,17 @@ AS7 Is responsible for the following:
 
 TODO: Fully define exactly what goes where.
 
-The servlet component of Undertow will be configurable by a fluent API, that 
-AS7 and other integrators will use. This API takes the place of XML and 
-annotation parsing, the container will use this API to build up a deployment 
-and control its lifecycle. 
+The servlet component of Undertow will be configurable by a fluent API, that
+AS7 and other integrators will use. This API takes the place of XML and
+annotation parsing, the container will use this API to build up a deployment
+and control its lifecycle.
 
 Servlet Handler Chain
 ---------------------
 
-The handler chain responsible for servlet invocations will generally be very 
-short, with most funtionality being provided by non-blocking handlers layered
-in front of the servlet handlers. Servlet core will provide the following 
+The handler chain responsible for servlet invocations will generally be very
+short, with most functionality being provided by non-blocking handlers layered
+in front of the servlet handlers. Servlet core will provide the following
 handlers:
 
 - A handler that dispatches the request to the appropriate handler chain, 
@@ -196,27 +196,63 @@ and attaches them to the exchange.
 - A handler that invokes the filters
 - A handler that invokes the servlet
 
-As much funtionality as possible will be handled by non-blocking handlers. For
+As much functionality as possible will be handled by non-blocking handlers. For
 instance if a request path is not routed though any filters or servlets, then
 it will not be routed through any blocking handlers, and any static resources
-will instead be served via an async handler. 
+will instead be served via an async handler.
+
+Configuration and Bootstrap
+---------------------------
+
+The basic configuration will be done via a fluent builder API, an example of
+what this might look like is shown below:
+
+	final PathHandler root = new PathHandler();
+        final ServletContainer container = new ServletContainer(root);
+
+        ServletInfo.ServletInfoBuilder s = ServletInfo.builder()
+                .setName("servlet")
+                .setServletClass(SimpleServlet.class)
+                .addMapping("/aa");
+
+        DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()
+                .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
+                .setContextName("/servletContext")
+                .setDeploymentName("servletContext.war")
+                .setResourceLoader(TestResourceLoader.INSTANCE)
+                .addServlet(s);
+
+        DeploymentManager manager = container.addDeployment(builder);
+        manager.deploy();
+        manager.start();
+
+
+A deep copy of these builders may be further modified during the deploy()
+phase by ServletContainerInitializers (It is necessary to clone the builders
+so we always retain the original configuration if the MSC service is bounced).
+
+Once the deploy() phase is finished builders build an immutable copy of the
+DeploymentInfo, that contains all the deployments configuration. When start()
+is called this metadata is used to construct the appropriate handler chains. 
+
 
 JBoss Application Server Integration
 ------------------------------------
 
 Initially this integration will be provided by a seperate module maintained in
 the Undertow organisation. This will provide an AS7 subsystem and an installer
-(ala Torquebox, Immutant etc) that will add the subsystem to an existing AS7 
+(ala Torquebox, Immutant etc) that will add the subsystem to an existing AS7
 instance. There are several reasons why this will be developed outside the AS7
 repository:
 
 - Removes the potential for conflicts. If we were developing in a seperate AS7
-branch we would either need to use merge commits or frequest rebases to keep 
-up with the AS7 tree, neither of which are particularly desirable option.
-- Shorter build times. AS7 takes around an hour to build and fully test, 
-keeping this in a different repo initialy will make build/test times 
-a lot shorter. 
-- Easy of user adoption. This approach will make it much easier for AS7 users 
+branch we would either need to use merge commits or frequest rebases to keep
+up with the AS7 tree, neither of which are particularly desirable option. -
+Shorter build times. AS7 takes around an hour to build and fully test,
+keeping this in a different repo initialy will make build/test times  a lot
+shorter.
+
+- Easy of user adoption. This approach will make it much easier for AS7 users
 to install undertow into their existing instance and test it out.
 
 
