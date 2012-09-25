@@ -261,3 +261,76 @@ to install undertow into their existing instance and test it out.
 
 Security
 ========
+
+The security handlers are primarily implemented as asynchronous handlers under 
+the core module, this is for a couple of reasons.
+
+* Allow authentication to occur in the call as early as possible.
+* Allows for use of the mechanisms in numerous scenarios and not just for servlets.
+
+The implementation makes use of a pair of handlers to coordinate the authentication
+process with handlers for specific authentication mechanisms sandwiched between them.
+The inbound exchange is expected to pass through the mechanism specific handler where 
+each handler checks the incomming request for whatever it may require to perform 
+authentication, if the mechanism handler can find what it needs then authentication is
+performed and the call progresses to the next handler, this repeats until the 
+`SecurityEndHandler` is reached.
+
+The `SecurityEndHandler` is the final barrier for entry of the request, if this handler is 
+reached and authentication is required but not completed the call will progress no further
+and the `HttpCompletionHandler` will be called.  As the mechanism specific handlers were 
+handling the incomming request they will also have been wrapping the `HTTPCompletionHandler`
+with one of their own - at this point as the `HTTPCompletionHandlers` are being called they will
+be setting their mechanism specific challenges in the response message being sent to the client.
+
+![An Example Security Chain](https://raw.github.com/darranl/undertow-docs/security/images/security_handlers.png "An Example Security Chain") 
+
+In this note that the handleComplete calls are shown as dotted lines as the are not really 
+to the handler but to a `HttpCompletionHandler` registered by the handler.
+
+Primarily the state of authentication is associated with the `HTTPServerExchange` however
+in addition to this the state can also be associated with the `HttpServerConnection` or
+the `Session` - how these additional stores are used is mechanism specific - as an example 
+the HTTP Digest mechanism allows for a nonce to be only used for a short time, the 
+`SecurityInitialHandler` should not undermine this by then using authentication date
+in a session which has a long term ID and no replay protection.
+
+To coordinate this the primary purpose of the `SecurityInitialHandler` is to create a 
+`SecurityContext` and associate it with the current `HttpServerExchange`, one of the parameters
+stored within the `SecurityContext` is an `AuthenticationState` which can take one of four
+values: -
+
+* **NOT_REQUIRED** - No security constraint has been identified that mandates authenitcation.
+* **REQUIRED** - Authentication must be successful before the request can be processed.
+* **AUTHENTICATED** - This request has been authenticated.
+* **FAILED** - A failure occured authenticating this request, at this stage this does not differentiate between bad parameters or some other internal failure.
+
+The following diagram shows the transitions between these states.
+
+![Authentication States](https://raw.github.com/darranl/undertow-docs/security/images/authentication_states.png "Authentication States") 
+
+The `SecurityInitialHandler` is responsible for setting the initial state to `REQUIRED` or `NOT_REQUIRED` 
+based on the configured security constraints, the mechanism specific handlers will then perform 
+the transitions to the other states as illustrated.  The `SecurityEndHandler` will then only 
+allow the request to proceed if the state is either `NOT_REQUIRED` or `AUTHENTICATED`.
+
+The transitions from `REQUIRED` are fairly self explanitory, if a mechanism specific handler
+successfully authenticated the incomming request it will transition to `AUTHENTICATED`,
+if there is any failure during the verification then it will set it to `FAILED`.  If the
+incomming request does not contain the parameters required by the mechanism then no
+transition will occur.
+
+The transition from `NOT_REQUIRED` requires a little more description, these transitions
+are to cover a scenario where the final applications being served up by the server
+require access to a users identity if they have authenticated so in this situation 
+depending on the mechanism there could be verifiable security tokens in the request
+even though a challenge was not sent or there could be state already cached against the
+`HTTPServerConnection` or within the `Session`.  The transition to `Authenticated` is the
+simplest - that happens if the mechanism was able to confirm the authenticated state of
+the user.  A transition to `Failed` would occur if the authentication can not be verfied
+due to some internal error.  The transition to `Required` would be used for scenarios
+where we have an authenticated user but the authentication is 'stale' this could be because
+the nonce in a digest challenge has now expired or it could be because a previously valid
+password is no longer valid.
+
+

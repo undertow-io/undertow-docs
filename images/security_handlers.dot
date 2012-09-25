@@ -1,0 +1,14 @@
+digraph security_handlers {
+    initial[label="SecurityInitialHandler"];
+    basic[label="HTTP Basic Handler"];
+    spnego[label="HTTP SPNEGO Handler"];
+    end[label="SecurityEndHandler"];
+
+    initial->basic [label="handleRequest(...)"];
+    basic->spnego [label="handleRequest(...)"];
+    spnego->end [label="handleRequest(...)"];
+
+    end->spnego [style=dotted,label="handleComplete()"];
+    spnego->basic [style=dotted,label="handleComplete()"];
+    basic->initial [style=dotted,label="handleComplete()"];
+}
