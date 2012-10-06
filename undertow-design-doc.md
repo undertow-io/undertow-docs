@@ -4,7 +4,7 @@ Stuart Douglas <sdouglas@redhat.com>
 v0.1, 2012
 
 This is the design document for the undertow web server. It covers general
-arcitecture and design considerations, it is not a requirements document.
+architecture and design considerations, it is not a requirements document.
 
 Overview  
 --------
@@ -37,7 +37,7 @@ Incoming Requests
 -----------------
 
 Standard HTTP requests come into the server via the HTTPOpenListener, which
-wraps the channel in a PushBackStreamChannel and  then hands off to the
+wraps the channel in a PushBackStreamChannel and then hands off to the
 HTTPReadListener. The HTTPReadListener parses the request as it comes in, and
 once it has read all headers it creates a HTTPServerExchange and invokes the
 root handler. Any of the content body / next request that is read by this
@@ -96,7 +96,7 @@ callbacks, or delegate the task to a thread pool (such as the XNIO worker
 pool).
 
 The request and response streams may be wrapped by a handler, by registering a
-ChannelWrapper with the HttpServerExcahnge. This wrapping will generally only
+ChannelWrapper with the HttpServerExchange. This wrapping will generally only
 be used by handlers that implement a transfer or a content encoding. For
 instance to implement compression a handler would register a ChannelWrapper
 that compresses any data that passes through it, and writes the compressed
@@ -104,7 +104,7 @@ data to the underlying channel. Note that these wrappers are only used to
 write out the response body, they cannot be used to change the way the status
 line and headers are written out.
 
-Only a single hander can responsible for reading the request or writing the
+Only a single handler can responsible for reading the request or writing the
 body. If a handler attempts to get channel after another handler has already
 grabbed it then null will be returned.
 
@@ -129,8 +129,8 @@ operation (e.g. if the session is stored in a database, or located on another
 node in the cluster).
 
 Once the Session and SessionManager are attached to the exchange later handler
-can sore data in the session, or use the session manager to create a new
-session in one does not already exist.
+can store data in the session, or use the session manager to create a new
+session if one does not already exist.
 
 Configuration
 -------------
@@ -140,7 +140,7 @@ programatically configured by assembling handler chains. XML configuration
 will be provided by the AS7 subsystem. This allows the server to be used in an
 embedded mode without any XML configuration. In order to provide a standalone
 servlet container to compete with Tomcat and Jetty we will use a cut down AS7
-instance, that just provides the web subsystem. This will mean that  users
+instance, that just provides the web subsystem. This will mean that users
 will get all the AS7 benefits (modules, management etc) with a smaller
 download and a container that is perceived as being more lightweight than a
 full AS7 instance.
@@ -249,7 +249,7 @@ repository:
 branch we would either need to use merge commits or frequest rebases to keep
 up with the AS7 tree, neither of which are particularly desirable option. -
 Shorter build times. AS7 takes around an hour to build and fully test,
-keeping this in a different repo initialy will make build/test times  a lot
+keeping this in a different repo initialy will make build/test times a lot
 shorter.
 
 - Easy of user adoption. This approach will make it much easier for AS7 users
