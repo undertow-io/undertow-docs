@@ -256,81 +256,124 @@ shorter.
 to install undertow into their existing instance and test it out.
 
 
-
-
-
 Security
 ========
 
-The security handlers are primarily implemented as asynchronous handlers under 
-the core module, this is for a couple of reasons.
+Security within Undertow is implemented as a set of asynchronous handlers and a set of authentication
+mechanisms co-ordinated by these handles.
 
 * Allow authentication to occur in the call as early as possible.
 * Allows for use of the mechanisms in numerous scenarios and not just for servlets.
 
-The implementation makes use of a pair of handlers to coordinate the authentication
-process with handlers for specific authentication mechanisms sandwiched between them.
-The inbound exchange is expected to pass through the mechanism specific handler where 
-each handler checks the incomming request for whatever it may require to perform 
-authentication, if the mechanism handler can find what it needs then authentication is
-performed and the call progresses to the next handler, this repeats until the 
-`SecurityEndHandler` is reached.
+Early in the call chain is a handler called `SecurityInitialHandler`, this is where the security processing
+beings, this handler ensures that an empty `SecurityContext` is set on the current `HttpServerExchange`
+and that any existing `SecurityContext` is removed.  As the call returns later this handler
+is also responsible for removing the `SecurityContext` that was set and restoring the one remove.
 
-The `SecurityEndHandler` is the final barrier for entry of the request, if this handler is 
-reached and authentication is required but not completed the call will progress no further
-and the `HttpCompletionHandler` will be called.  As the mechanism specific handlers were 
-handling the incomming request they will also have been wrapping the `HTTPCompletionHandler`
-with one of their own - at this point as the `HTTPCompletionHandlers` are being called they will
-be setting their mechanism specific challenges in the response message being sent to the client.
+The `SecurityContext` is responsible for both holding the state related to the currently authenticated user
+and also for holding the configured `AuthenticationMechanism`s and providing methods to work with both of 
+these.  As this `SecurityContext` is replacable and restorable then advanced configurations can be
+achieve where a general configuration can be applied to a complete server with custom configuration
+replacing it later in the call.
+
+After the `SecurityContext` has been established subseqeunt handlers can then add `AuthenticationMechanism`s
+to the context, to simplify this Undertow contains a handler called `AuthenticationMechanismsHandler`
+this handler can be created with a set of `AuthenticationMechanism`s and will set them all on the 
+established `SecurityContext`.  Alternatively custom handlers could be used to add mechanisms one at a time
+bases on alternative requirements.
+
+The next handler in the authentication process is the `AuthenticationConstraintHandler`, this handler is 
+responsible for checking the current request and identifying if authentication should be marked as being
+required for the current request.  The default implementation marks authentication as being required for
+all requests that it handles - the handler can be extended and the `isAuthenticationRequired` method 
+overriden to provide more complex checks.
+
+The final handler in this chain is the `AuthenticationCallHandler`, this handler is responsible for 
+ensuring the `SecurityContext` is called to actually perform the authentication process, depending 
+on any identified constraint this will either mandate authentication or only perform authentication 
+if appropriate for the configured mechanisms.
+
+There is no requirement for these handlers to be executed consecutively, the only requirement is that first
+the `SecurityContext` is established, then the `AuthenticationMechanism`s and constrain check can be 
+performed in any order and finally the `AuthenticationCallHandler` but be called before any processing of
+a potentially protected resource.
 
 ![An Example Security Chain](https://raw.github.com/darranl/undertow-docs/security/images/security_handlers.png "An Example Security Chain") 
 
-In this note that the handleComplete calls are shown as dotted lines as the are not really 
-to the handler but to a `HttpCompletionHandler` registered by the handler.
+Security mechanisms that are to be used must implement the following interface: -
 
-Primarily the state of authentication is associated with the `HTTPServerExchange` however
-in addition to this the state can also be associated with the `HttpServerConnection` or
-the `Session` - how these additional stores are used is mechanism specific - as an example 
-the HTTP Digest mechanism allows for a nonce to be only used for a short time, the 
-`SecurityInitialHandler` should not undermine this by then using authentication date
-in a session which has a long term ID and no replay protection.
+        public interface AuthenticationMechanism {
+            IoFuture<AuthenticationResult> authenticate(final HttpServerExchange exchange);
+            void handleComplete(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler);
+        }
 
-To coordinate this the primary purpose of the `SecurityInitialHandler` is to create a 
-`SecurityContext` and associate it with the current `HttpServerExchange`, one of the parameters
-stored within the `SecurityContext` is an `AuthenticationState` which can take one of four
-values: -
+The `AuthenticationResult` is used by the mechanism to indicate the status of the attempted authentication and
+is also used as the mechanism to return the Principal of the authenticated identity if authentication we
+achieved.
 
-* **NOT_REQUIRED** - No security constraint has been identified that mandates authenitcation.
-* **REQUIRED** - Authentication must be successful before the request can be processed.
-* **AUTHENTICATED** - This request has been authenticated.
-* **FAILED** - A failure occured authenticating this request, at this stage this does not differentiate between bad parameters or some other internal failure.
+        public class AuthenticationResult {
+            private final Principal principle;
+            private final AuthenticationOutcome outcome;
 
-The following diagram shows the transitions between these states.
+            public AuthenticationResult(final Principal principle, final AuthenticationOutcome outcome) { ... }
+        }
 
-![Authentication States](https://raw.github.com/darranl/undertow-docs/security/images/authentication_states.png "Authentication States") 
+The authentication process is split into two phases, the `INBOUND` phase and the `OUTBOUND` phase, the
+`INBOUND` phase is only responsible for checking if authentication data has been received from the client
+and using to attempt authentication if and only if it has been provided.  During the `INBOUND` phase the 
+mechanisms are called sequentally (if we wanted to support multiple mechanisms succeeding concurently 
+we could also execute these concurently although that would lead to multiple threads per request) -
+a mechanism is caled in this phase by a call to `authenticate`.
 
-The `SecurityInitialHandler` is responsible for setting the initial state to `REQUIRED` or `NOT_REQUIRED` 
-based on the configured security constraints, the mechanism specific handlers will then perform 
-the transitions to the other states as illustrated.  The `SecurityEndHandler` will then only 
-allow the request to proceed if the state is either `NOT_REQUIRED` or `AUTHENTICATED`.
+When the `authenticate` method of the `AuthenticationMechanism` is called the outcome is indicated
+using an `AuthenticationResult` with an `AuthenticationOutcome` of one of the following: -
 
-The transitions from `REQUIRED` are fairly self explanitory, if a mechanism specific handler
-successfully authenticated the incomming request it will transition to `AUTHENTICATED`,
-if there is any failure during the verification then it will set it to `FAILED`.  If the
-incomming request does not contain the parameters required by the mechanism then no
-transition will occur.
+* **AUTHENTICATED** - The mechanism has successfully authenticated the remote user.
+* **NOT_ATTEMPTED** - The mechanism saw no applicable security tokens so did not attempt to authenticate the user.
+* **NOT_AUTHENTICATED** - The mechanism attempted authentication but it either failed or requires an additional round trip to the client.
 
-The transition from `NOT_REQUIRED` requires a little more description, these transitions
-are to cover a scenario where the final applications being served up by the server
-require access to a users identity if they have authenticated so in this situation 
-depending on the mechanism there could be verifiable security tokens in the request
-even though a challenge was not sent or there could be state already cached against the
-`HTTPServerConnection` or within the `Session`.  The transition to `Authenticated` is the
-simplest - that happens if the mechanism was able to confirm the authenticated state of
-the user.  A transition to `Failed` would occur if the authentication can not be verfied
-due to some internal error.  The transition to `Required` would be used for scenarios
-where we have an authenticated user but the authentication is 'stale' this could be because
-the nonce in a digest challenge has now expired or it could be because a previously valid
-password is no longer valid.
+If the `AuthenticationOutcome` is `AUTHENTICATE` then a `Principal` must also be returned in the `AuthenticationResult`, the remaining
+outcomes will not have a `Principal` to return.
+
+The overall authentication process using the mechanisms run as follows: -
+
+Regardless of if authentication has been flagged as being required when the request reaches the `AuthenticationCallHandler` the 
+`SecurityContext` is called to commence the process.  The reason this happens regardless of if authentication is flagged as
+required is for a few reasons: -
+1 - The client may have sent additional authentication tokens and have expectations the response will take these into account.
+2 - We may be able to verify the remote user without any additional rount trips, especially where authentication has already occurred.
+3 - The authentication mechanism may need to pass intermediate updates to the client so we need to ensure any inbound tokens are valid.
+
+When authentication runs the `authenticate` method on each configured `AuthenticationMechanism` is called in turn, this continues
+untill one of the following occurs: -
+
+1 - A mechanisms successfully authenticates the request and returns `AUTHENTICATED`.
+2 - A mechanism attempts but does not complete authentication and returns `NOT_AUTHENTICATED`.
+3 - The list of mechanisms is exhausted.
+
+At this point if the response was `AUTHENTICATED` then the request will be allowed through and passed onto the next handler.
+
+If the request is `NOT_AUTHENTICATED` then either authentication failed or a mechanism requires an additional round trip with the
+client, either way the `handleComplete` method of each defined `AuthenticationMethod` is called in turn and the response sent back
+to the client.  All mechanisms are called as even if one mechanism is mid-authentication the client can still decide to abandon
+that mechanism and switch to an alternative mechanism so all challenges need to be re-sent.
+
+If the list of mechanisms was exhausted then the previously set authentication constraint needs to be checked, if authentication was
+not required then the request can proceed to the next handler in the chain and that will be then of authentication for this request
+(unless a later handler mandates authentication and requests authentication is re-atempted).  If however authentication was required
+then as with a `NOT_AUTHENTICATED` response each mechanism has `handleComplete` called in turn to generate an authentication challenge
+to send to the client.
+
+If request processing after calling the mechanisms is allowed through to the next handler and if no mechanism authenticated the 
+incomming requests then the mechanisms are not called in the `OUTBOUND` phase - however if an `AuthenticationMechanism` did 
+authenticate the client then regardless of if this was flagged as required the `handleComplete` method of that mechanism and only
+that mechanism will be called.  The purpose of this is in case the mechanism needs to send further mechanism specific tokens
+back to the client.
+
+A mechanism can make the following call within the `handleComplete` method to check if it should be sending back a general
+challenge or if it being called for an optional update: -
+
+        if (Util.shouldChallenge(exchange)) { ... }
+
 
 
