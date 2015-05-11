@@ -1,0 +1,113 @@
+// tag::main[]
+
+=== Architecture Overview
+
+This provides a general overview of Undertow's architecture. It is not intended to be a comprehensive guide.
+
+On thing that makes Undertow unique is that it has no concept of a global 'container'. Instead an Undertow
+server is assembled by the embedding application. This makes Undertow extremely flexible, and the embedding
+application can basically just pick the parts that they need, and assemble them in whatever way makes sense.
+
+An Undertow server is basically composed of three things, one (or more) XNIO worker instance, one or more connectors,
+and a handler chain to handle incoming requests.
+
+==== XNIO
+
+Undertow is based on XNIO. The XNIO project provides a thin abstraction layer over Java NIO. In particular it provides
+the following:
+
+==== Channel API
+
+XNIO provides a channel abstraction, that abstracts away the underlying transport. Channels are notified of events
+using the `ChannelListener` API, and do not have to deal with NIO interest OPs directly. At creation time channels are
+assigned an IO Thread. This is the thread that will be used to execute all ChannelListener invocations for the channel.
+
+==== Management of IO and Worker threads
+
+The XNIO worker manages both the IO threads, and a thread pool that can be used for blocking tasks. In general non-blocking
+handlers will run from withing an IO thread, while blocking tasks such as Servlet invocations will be dispatched to the
+worker thread pool.
+
+IO threads run in a loop. This loop does three things:
+
+ - Run any tasks that have been scheduled for execution by the IO thread
+ - Run any scheduled tasks that that have hit their timeout
+ - Call Selector.select(), and then invoke any callbacks for selected keys
+
+==== SSL Support
+
+XNIO also provides support for SSL, that provides the basis for Undertows SSL implementation.
+
+
+==== Listeners
+
+The concept of a listener in Undertow is basically the part of Undertow that handles incoming connections, and the
+underlying wire protocol. By default Undertow ships with 3 different listeners:
+
+- HTTP
+- HTTPS
+- AJP
+
+Support for SPDY is planned, and should be coming soon.
+
+These connectors basically take the form of two XNIO listeners, an open listener and a read listener. The open listener
+is invoked when a connection is first received. This listener will do any work required to setup the connection, and
+then pass this off to the read listener. The read listener is responsible for parsing the incoming request into a
+HttpServerExchange object, setting up any protocol specific state that is required, and delegating to the first handler
+in the handler chain. When the request is done the read listener is invoked again (assuming persistent connections are
+in use), and the process is repeated.
+
+Connectors are tied to an XNIO worker. If multiple connectors are setup to invoke the same handler chain they may share
+a Worker, or they may have separate workers, depending on how they have been configured.
+
+In general it should not matter to your application the type of connector that is in use, the exception being that not
+all connectors support all features. For example AJP does not support HTTP upgrade.
+
+For more information on listeners see the link:listeners.html[listeners guide].
+
+==== Handlers
+
+The main Undertow functionality is provided by `io.undertow.server.HttpHandler` instances. These handlers can be chained
+together to form a complete server.
+
+The HttpHandler interface is quite simple:
+
+[source%nowrap,java]
+----
+public interface HttpHandler {
+
+    void handleRequest(HttpServerExchange exchange) throws Exception;
+}
+----
+
+Handlers are generally chained together by explicitly specifying the next handler at construction time, there is no
+'pipeline' concept, which means that a handler can pick the next handler to invoke based on the current request. A
+typical handler might look something like this:
+
+
+[source%nowrap,java]
+----
+public class SetHeaderHandler implements HttpHandler {
+
+    private final HttpString header;
+    private final String value;
+    private final HttpHandler next;
+
+    public SetHeaderHandler(final HttpHandler next, final String header, final String value) {
+        this.next = next;
+        this.value = value;
+        this.header = new HttpString(header);
+    }
+
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        exchange.getResponseHeaders().put(header, value);
+        next.handleRequest(exchange);
+    }
+}
+
+----
+
+
+// end::main[]
+

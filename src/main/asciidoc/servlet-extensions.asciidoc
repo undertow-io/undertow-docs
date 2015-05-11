@@ -1,0 +1,30 @@
+// tag::main[]
+
+=== Servlet Extensions
+
+Servlet extensions allow you to hook into the Servlet deployment process, and modify aspect of a Servlet deployment.
+In some ways they are similar to `ServletContainerInitializer` or `ServletContextListener`, however they provides much
+more flexibility over what can be modified.
+
+In order to create a ServletExtension it is necessary to implement `io.undertow.servlet.ServletExtension`, and
+then add the name of your implementation class to `META-INF/services/io.undertow.servlet.ServletExtension`. When
+Undertow is deploying a Servlet deployment it will load all such services from the deployments class loader, and then
+invoke their `handleDeployment` method.
+
+This method is passed an Undertow `DeploymentInfo` structure, which contains a complete and mutable description of the
+deployment, my modifying this structure it is possible to change any aspect of the deployment.
+
+The DeploymentInfo structure is the same structure that is used by the embedded API, so in effect a ServletExtension
+has the same amount of flexibility that you have when using Undertow in embedded mode.
+
+There are many possible use cases for this, a common one would be to add additional authentication mechanisms to a
+deployment, or to use native Undertow handlers as part of a Servlet deployment.
+
+==== Examples
+
+link:deployment.html[The deployment guide] contains examples of how to use the `DeploymentInfo` API.
+
+link:using-non-blocking-handlers-with-servlet.html[Using non-blocking handlers with Servlet deployments]
+
+
+// end::main[]

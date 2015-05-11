@@ -1,0 +1,82 @@
+// tag::main[]
+
+=== Creating a Servlet Deployment
+
+A simple example of how to create a Servlet deployment is the servlet example from the Undertow examples:
+
+[source%nowrap,java]
+----
+DeploymentInfo servletBuilder = Servlets.deployment()
+        .setClassLoader(ServletServer.class.getClassLoader())
+        .setContextPath("/myapp")
+        .setDeploymentName("test.war")
+        .addServlets(
+                Servlets.servlet("MessageServlet", MessageServlet.class)
+                        .addInitParam("message", "Hello World")
+                        .addMapping("/*"),
+                Servlets.servlet("MyServlet", MessageServlet.class)
+                        .addInitParam("message", "MyServlet")
+                        .addMapping("/myservlet"));
+
+DeploymentManager manager = Servlets.defaultContainer().addDeployment(servletBuilder);
+manager.deploy();
+PathHandler path = Handlers.path(Handlers.redirect("/myapp"))
+        .addPrefixPath("/myapp", manager.start());
+
+Undertow server = Undertow.builder()
+        .addHttpListener(8080, "localhost")
+        .setHandler(path)
+        .build();
+server.start();
+----
+
+The basic process is to create a DeploymentInfo structure (this can be done use the `io.undertow.servlets.Servlets`
+utility method), add any Servlets and other information to this structure, and then deploy it to a Servlet container.
+
+After this is deployed you can call the `start()` method on the `DeploymentManager` which returns a `HttpHandler` than
+can then be installed in an Undertow server handler chain.
+
+The `DeploymentInfo` structure has a lot of data, and most of it directly corresponds to data in web.xml so it will
+not be covered in this guide, instead this will focus on the elements that are Undertow specific.
+
+==== Handler Chain Wrappers
+
+Hander chain wrappers allow you to insert additional `HttpHandlers` into the Servlet chain, there are three methods that
+allow you to do this:
+
+addInitialHandlerChainWrapper():: This allows you to add a handler that is run before all other Servlet handlers. If
+this handler does not delegate to the next handler in the chain it can effectively bypass the Servlet deployment.
+
+addOuterHandlerChainWrapper():: This handler is run after the servlet request context has been setup, but before any
+other handlers.
+
+addInnerHandlerChainWrapper():: This handler is run after the security handlers, just before the request is dispatched to
+deployment code.
+
+==== Thread Setup Actions
+
+Thread setup actions can be added using the `addThreadSetupAction()` method, these actions will be run before a request
+is dispatched to a thread, so any thread local data can be setup.
+
+==== The Resource Manager
+
+The `ResourceManager` is used by the default servlet to serve all static resources. By modifying the resource manager
+in use it is possible to pick where static resource are served from.
+
+==== Authentication Mechanisms
+
+The authentication mechanism to use is determined by the `LoginConfig` object. This maintains a list of mechanism names
+and the mechanisms will be tried in order.
+
+In addition to the built in mechanisms it is possible to add custom authentication mechanisms using the
+`addFirstAuthenticationMechanism()` `addLastAuthenticationMechanism()` and `addAuthenticationMechanism()` methods.
+
+The first and last versions of this method will both add a mechanism and add it to the `LoginConfig` object,
+while the `addAuthenticationMechanism()` simply registers a factory for the given mechanism name. If you are trying
+to create a general purpose authentication mechanism via a Servlet extension this is the method you should use, as it
+means you can install your extension into a server for all deployments, and it will only be active for deployments
+where the user has specifically selected your mechanism name in web.xml.
+
+// end::main[]
+
+

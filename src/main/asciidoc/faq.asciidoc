@@ -1,0 +1,58 @@
+// tag::main[]
+
+=== Undertow FAQ
+
+Here is a list of frequently asked questions.
+
+==== Why does the world need another web server?
+
+Before we created Undertow we needed multiple web server technologies to meet our needs. Undertow was designed to be flexible and efficient enough to meet every use case we had and every use case we could think of. Undertow is embeddable and easy to use, but is also well suited for application servers.  It has great performance, but also rich enterprise Java capabilities. It has efficient non-blocking reactive APIs, but also more familiar traditional blocking APIs. It has new innovative APIs, but also standard APIs. It can run large dynamic applications, but is also lightweight enough to replace a native web server.
+
+==== What JDK does Undertow require?
+
+Java 7 or later.
+
+==== Why am I only seeing one request being processed at a time?
+
+Some browsers share connections between tabs, so even if you have opened another tab the second tab will not load until the first tab has completed.
+
+
+==== When will Undertow be included in JBoss EAP?
+
+Undertow is currently planned for EAP7, which will be based on a future WildFly release. It can be used today on its own or within WindFly 8.
+
+==== What license is Undertow under?
+
+Undertow is licensed under the Apache License, Version 2.0.
+
+==== How do I build Undertow?
+
+1. git clone git://github.com/undertow-io/undertow.git
+2. cd undertow
+3. mvn install
+
+==== How do I get started?
+
+A good starting point is taking a look at our
+link:https://github.com/undertow-io/undertow/tree/master/examples[examples].
+
+==== Where can I get help?
+
+A number of the developers and users hang out on IRC at #undertow on irc.freenode.org. We also have a link:https://lists.jboss.org/mailman/listinfo/undertow-dev[mailing list] you can subscribe to. Finally, if you are using Undertow in WildFly you can use the general WildFly project forum as well.
+
+==== Why isn't Undertow based on Mina, Netty, RNIO, Grizzly, or <insert network framework>?
+
+In order to best achieve its goals, Undertow requires very close integration with the underlying I/O
+infrastructure in the Java platform. The simplicity offered by any abstraction comes from hiding
+the underlying mechanisms behind it. However, the dilemma is that building an extremely efficient
+and flexible web server requires customization and control of these mechanisms. Undertow attempts
+to strike the right balance by reusing a minimalistic I/O library, XNIO, that was created for
+WildFly's remote invocation layer.
+
+XNIO allows us to eliminate some boiler plate, and also allows
+for direct I/O integration with the operating system, but it does not go further than that. In
+addition, XNIO offers very strong backwards compatibility which is important since this is also
+a concern for the Undertow project. Of course, other projects may have different needs, and thus
+might make different choices.
+
+// end::main[]

@@ -1,0 +1,84 @@
+// tag::main[]
+
+=== Advanced Servlet Use Cases
+
+As well as allowing you to add all the standard Servlet constructs that you would expect (such as Servlets, Filters
+etc), Undertow also allows you to customise your deployment in a number of ways. This section details these additional
+options.
+
+NOTE: This section does not cover all the different options available in the DeploymentInfo structure. For a complete
+reference please refer to the javadoc.
+
+==== Inserting Custom Handlers into the Servlet Handler Chain
+
+It is possible to insert customer handlers into various parts of the servlet handler chain. This is done by adding a
+`io.undertow.server.HandlerWrapper` to the DeploymentInfo structure. This will be called at deployment time and allows
+you to wrap the existing handler.
+
+There are three possible places where a handler can be inserted:
+
+Before the Servlet Chain::
+
+This happens before any Servlet handlers are invoked, and handlers inserted here have the option of completly bypassing
+Servlet altogether. Some possible use cases include serving static files directly without any Servlet overhead, or
+performing some kind of request re-writing before Servlet is invoked. To add a wrapper here use
+`DeploymentInfo.addInitialHandlerChainWrapper(HandlerWrapper wrapper)`.
+
+After the Servlet Initial Handler::
+
+This happens after the initial Servlet handler is invoked. The request has been dispatched to a worker thread,
+request and response objects have been created, the target servlet has been resolved and all relevant info has been
+attached to the exchange as part of the `ServletRequestContext`. No security handlers have been invoked at this stage.
+To add a wrapper here use `DeploymentInfo.addOuterHandlerChainWrapper(HandlerWrapper wrapper)`.
+
+After the Security Initial Handlers::
+
+This happens after the Security handlers have been invoked, before the request is dispatched to the first Filter or
+Servlet.
+
+To add a wrapper here use `DeploymentInfo.addInnerHandlerChainWrapper(HandlerWrapper wrapper)`.
+
+==== Thread Setup Actions
+
+Thread setup actions allow you to perform tasks before and after control is dispatched to user code. The most common
+use for this is to set up thread local contexts. For example a server might want to setup the appropriate JNDI contexts
+before control is passed to user code, so make sure the code has access to the correct `java:comp` context.
+
+Thread setup actions can be added using `DeploymentInfo.addThreadSetupAction(ThreadSetupAction action)`.
+
+==== Ignore Flush
+
+In Servlet code it is common to see code that looks like this:
+
+[source%nowrap,java]
+----
+public class SomeServlet extends HttpServlet {
+
+    @Override
+    protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+            OutputStream stream = resp.getOutputStream();
+
+            //do stuff
+
+            stream.flush();
+            stream.close();
+        }
+    }
+}
+
+----
+
+While this seems reasonable at first glace it is actually terrible from a performance point of view. The `flush()` call
+before the `close()` call forces content to be written to the client, which will generally force chunked encoding. The
+following `close()` call then writes out the chunk terminator, resulting in another write to the socket. This means that
+a response that could otherwise have been written out using a single write call using a fixed content length now takes
+two and uses chunked encoding.
+
+To work around this poor practice Undertow provides an option to ignore flushes on the ServletOutputStream. This can
+be activated by calling `DeploymentInfo.setIgnoreFlush(true)`. Even though `flush()` will no longer flush to the
+client when this is enabled Undertow will still treat the response as commited and not allow modification of the headers.
+
+
+// end::main[]
+
+

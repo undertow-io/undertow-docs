@@ -1,0 +1,112 @@
+// tag::main[]
+
+=== Built in Handlers
+
+Undertow contains a number of build in handlers that provide common functionality. Most of these handlers can be created
+using static methods on the `io.undertow.Handlers` utility class.
+
+The most common of these handlers are detailed below.
+
+Path::
+
+The path matching handler allows you to delegate to a handler based on the path of the request. It can match on either
+an exact path or a path prefix, and will update the exchanges relative path based on the selected path. Paths are first
+checked against an exact match, and then via longest prefix match.
+
+Virtual Host::
+
+This handler delegates to a handler based on the contents of the `Host:` header, which allows you to select a different
+chain to handle different hosts.
+
+Path Template::
+
+Similar to the path handler, however the path template handler allows you to use URI template expressions in the path,
+for example /rest/{name}. The value of the relevant path template items are stored as an attachment on the exchange,
+under the `io.undertow.server.handlers.PathTemplateHandler#PATH_TEMPLATE_MATCH` attachment key.
+
+
+Date::
+
+This handler sets the `Date:` header as required by the HTTP RFC. In order to avoid formatting a new date each time
+dates are accurate to the nearest second.
+
+Resource::
+
+The resource handler is used to serve static resources such as files. This handler takes a `ResourceManager` instance,
+that is basically a file system abstraction. Undertow provides file system and class path based resource mangers, as
+well as a caching resource manager that wraps an existing resource manager to provide in memory caching support.
+
+Predicate::
+
+The predicate handler picks between two possible handlers based on the value of a predicate that is resolved against the
+exchange. For more information see the link:predicates-attributes-handlers.html[predicates guide].
+
+HTTP Continue::
+
+There are multiple handlers that deal with requests that expect a HTTP 100 Continue response. The HTTP Continue Read
+Handler will automatically send a continue response for requests that require it the first time a handler attempts to
+read the request body.
+The HTTP Continue Accepting handler will immediately either send a 100 or a 417 response depending on the value of a
+predicate. If no predicate is supplied it all immediately accept all requests. If a 417 response code is send the
+next handler is not invoked and the request will be changed to be non persistent.
+
+Websocket::
+
+Handler that handles incoming web socket connections. See the link:websockets.html[websockets guide] for details.
+
+Redirect::
+
+A handler that redirects to a specified location.
+
+Trace::
+
+A handler that handles HTTP TRACE requests, as specified by the HTTP RFC.
+
+Header::
+
+A handler that sets a response header.
+
+IP Access Control::
+
+A handler that allows or disallows a request based on the IP address of the remote peer.
+
+ACL::
+
+A handler that allows or disallows a request based on an access control list. Any attribute of the exchange can be used
+as the basis of this comparison.
+
+URL Decoding::
+
+A handler that decodes the URL and query parameters into a specified charset. It may be that different resources may
+require a different charset for the URL. In this case it is possible to set the Undertow listener to not decode the URL,
+and instead multiple instances of this handler at an appropriate point in the handler chain. For example this could
+allow you to have different virtual hosts use different URL encodings.
+
+Set Attribute::
+
+Sets an arbitrary attribute on the exchange. Both the attribute and the value are specified as exchange attributes, so
+this handler can essentially be used to modify any part of the exchange. For more information see the section on
+link:predicates-attributes-handlers.html[exchange attributes].
+
+Rewrite::
+
+Handler that provides URL rewrite support.
+
+Graceful Shutdown::
+
+Returns a handler that can be used to make sure all running requests are finished before the server shuts down. This
+handler tracks running requests, and will reject new ones once shutdown has started.
+
+Proxy Peer Address::
+
+This handler can be used by servers that are behind a reverse proxy. It will modify the exchanges peer address and
+protocol to match that of the X-Forwarded-* headers that are sent by the reverse proxy. This means downstream handlers
+will see that actual clients peer address, rather than that of the proxy.
+
+Request Limiting Handler::
+
+Handler that limits the number of concurrent requests. If the number exceeds the limit requests are queued. If the
+queue fills up then requests are rejected.
+
+
+// end::main[]

@@ -1,0 +1,78 @@
+// tag::main[]
+
+=== Servlet Security
+
+As well as support for the standard servlet spec required authentication mechanisms, Undertow also allows you to create
+your own mechanisms, and provides an easy way to make the accessible to an end user.
+
+==== Securing a Servlet Deployment
+
+Undertow provides full support for all security constructs specified in the Servlet specification. These are configured
+via the DeploymentInfo structure, and in general closely mirror the corresponding structures as defined by annotations
+or +web.xml+. These structures are not detailed fully here, but are covered by the relevant javadoc.
+
+If you are using Wildfly then then it is possible to configure multiple mechanisms using +web.xml+, by listing the
+mechanism names separated by commas. It is also possible to set mechanism properties using a query string like syntax.
+
+For example:
+
+
+[source%nowrap,xml]
+----
+<auth-method>BASIC?silent=true,FORM</auth-method>
+----
+
+The mechanisms will be tried in the order that they are listed. In the example silent basic auth will be tried first,
+which is basic auth that only takes effect if an +Authorization+ header is present. If no such header is present then
+form auth will be used instead. This will allow programatic clients to use basic auth, while users connecting
+via a browser can use form based auth.
+
+The built it list of mechanisms and the properties they take are as follows:
+
+[frame="topbot",options="header"]
+|==========================
+|Mechanism Name | Options               | Notes       |
+|BASIC          | silent (true/false)   | Silent mode means that a challenge will only be issued if an +Authorization+ header with invalid credentials is present. If this header is not present this auth method will never be used. |
+|FORM           |                       |               |
+|CLIENT-CERT    |                       |               |
+|DIGEST         |                       |               |
+|EXTERNAL       |                       | Used when authentication is being done by a front end such as httpd|
+|==========================
+
+
+==== Selecting an Authentication Mechanism
+
+The authentication mechanism is specified via the `io.undertow.servlet.api.LoginConfig` object that can be added using
+the method `DeploymentInfo.setLoginConfig(LoginConfig config)`. This object contains an ordered list of mechanism names.
+The Servlet specification only allows you to specify a single mechanism name, while Undertow allows as many as you want
+(if you are using Wildfly you can make use of this by using a comma separated list of names in web.xml, and pass
+properties using a query string like syntax, for example `BASIC?silent=true,FORM`).
+
+The mechanisms are standard Undertow `AuthenticationMechanism` implementations, and it should be noted that not all
+mechanisms are compatible. For example trying to combine FORM and BASIC does not work, just because they both require
+a different response code. Combining FORM and silent BASIC will work just fine however (silent basic auth means that
+if the user agent provides an `Authorization:` header then BASIC auth will be used, however if this header is not
+present then no action will be taken. This allows scripts to use basic auth, while browsers can use form).
+
+When adding the mechanism name to the `LoginConfig` structure it is also possible to specify a property map. Custom
+authentication mechanisms may use these properties however they wish. The only built in mechanism that makes use of this
+mechanism is basic auth, which if passed `Collections.singletonMap("silent", "true")` will enable silent mode as
+described above.
+
+The built in mechanisms are FORM, DIGEST, CLIENT_CERT and BASIC.
+
+==== Adding a Custom Authentication Mechanism
+
+Custom authentication mechanisms are added using the Undertow `ServletExtension` mechanism. This provides a way
+to hook into the Undertow deployment process, and add any additional mechanisms.
+
+These extensions are discovered via the standard META-INF/services discovery mechanism, so if you have a jar that
+provides a custom authentication mechanism all that should be required is to add this jar to your deployment and
+then specify the mechanism name in web.xml.
+
+For more info see the link:servlet-extensions.html:[Servlet extensions guide].
+
+
+// end::main[]
+
+

@@ -1,0 +1,189 @@
+// tag::main[]
+
+=== Listeners
+
+Listeners represent the entry point of an Undertow application. All incoming requests will come through a listener, and
+a listener is responsible for translating a request into an instance of the `HttpServerExchange` object, and then
+turning the result into a response that can be sent back to the client.
+
+Undertow provides 4 built in listener types, HTTP, AJP, SPDY and HTTP2. HTTPS is provides by using the HTTP listener
+with an SSL enabled connection.
+
+Note that it is expected that now that HTTP2 is out it is expected that SPDY will be deprecated and eventually removed.
+
+==== XNIO workers
+
+All listeners are tied to an XNIO Worker instance. Usually there will only be a single worker instance that is shared
+between listeners, however it is possible to create a new worker for each listener.
+
+The worker instance manages the listeners IO threads, and also the default blocking task thread pool. There are several
+main XNIO worker options that affect listener behaviour. These option can either be specified on the Undertow builder
+as worker options, or at worker creating time if you are bootstrapping a server manually. These options all reside on
+the org.xnio.Options class.
+
+WORKER_IO_THREADS::
+The number of IO threads to create. IO threads perform non blocking tasks, and should never perform blocking operations
+because they are responsible for multiple connections, so while the operation is blocking other connections will
+essentially hang. One IO thread per CPU core is a reasonable default.
+
+WORKER_TASK_CORE_THREADS::
+The number of threads in the workers blocking task thread pool. When performing blocking operations such as Servlet
+requests threads from this pool will be used. In general it is hard to give a reasonable default for this, as it depends
+on the server workload. Generally this should be reasonably high, at least 10 per CPU core.
+
+==== Buffer Pool
+
+All listeners have a buffer pool, which is used to allocate pooled NIO `ByteBuffer` instances. These buffers are used
+for IO operations, and the buffer size has a big impact on application performance. For servers the ideal size is
+generally 16k, as this is usually the maximum amount of data that can be written out via a `write()` operation
+(depending on the network setting of the operating system). Smaller systems may want to use smaller buffers to save
+memory.
+
+In some situations with blocking IO the buffer size will determine if a response is sent using chunked encoding or has a
+fixed content length. If a response fits completely in the buffer and `flush()` is not called then a content length can
+be set automatically.
+
+==== Common Listener Options
+
+In addition to the worker options the listeners take some other options that control server behaviour. These are all
+part of the `io.undertow.UndertowOptions` class. Some of of these only make sense for specific protocols. You can set
+options with the `Undertow.Builder.setServerOption`:
+
+MAX_HEADER_SIZE::
+
+The maximum size of a HTTP header block, in bytes. If a client sends more data that this as part of the request header
+then the connection will be closed. Defaults to 50k.
+
+MAX_ENTITY_SIZE::
+
+The default maximum size of a request entity. If entity body is larger than this limit then a `java.io.IOException` will
+be thrown at some point when reading the request (on the first read for fixed length requests, when too much data has
+been read for chunked requests). This value is only the default size, it is possible for a handler to override this for
+an individual request by calling `io.undertow.server.HttpServerExchange.setMaxEntitySize(long size)`. Defaults 
+to unlimited.
+
+MAX_PARAMETERS::
+
+The maximum number of query parameters that are permitted in a request. If a client sends more than this number the
+connection will be closed. This limit is necessary to protect against hash based denial of service attacks. Defaults to
+1000.
+
+MAX_HEADERS::
+
+The maximum number of headers that are permitted in a request. If a client sends more than this number the
+connection will be closed. This limit is necessary to protect against hash based denial of service attacks. Defaults to
+200.
+
+MAX_COOKIES::
+
+The maximum number of cookies that are permitted in a request. If a client sends more than this number the
+connection will be closed. This limit is necessary to protect against hash based denial of service attacks. Defaults to
+200.
+
+URL_CHARSET::
+
+The charset to use to decode the URL and query parameters. Defaults to UTF-8.
+
+DECODE_URL::
+
+Determines if the listener will decode the URL and query parameters, or simply pass it through to the handler chain as
+is. If this is set url encoded characters will be decoded to the charset specified in URL_CHARSET. Defaults to true.
+
+ALLOW_ENCODED_SLASH::
+
+If a request comes in with encoded / characters (i.e. %2F), will these be decoded.
+This can cause security problems (link:http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-0450) if a front end
+proxy does not perform the same decoding, and as a result this is disabled by default.
+
+ALLOW_EQUALS_IN_COOKIE_VALUE::
+
+If this is true then Undertow will allow non-escaped equals characters in unquoted cookie values. Unquoted cookie
+values may not contain equals characters. If present the value ends before the equals sign. The remainder of the
+cookie value will be dropped. Defaults to false.
+
+ALWAYS_SET_DATE::
+
+If the server should add a HTTP `Date` header to all response entities which do not already have one.
+The server sets the header right before writing the response, if none was set by a handler before. Unlike
+the `DateHandler` it will not overwrite the header. The current date string is cached, and is updated
+every second. Defaults to true.
+
+ALWAYS_SET_KEEP_ALIVE::
+
+If a HTTP `Connection: keep-alive` header should always be set, even for HTTP/1.1 requests that are persistent by default. Even
+though the spec does not require this header to always be sent it seems safer to always send it. If you are writing
+some kind of super high performance application and are worried about the extra data being sent over the wire this
+option allows you to turn it off. Defaults to true.
+
+MAX_BUFFERED_REQUEST_SIZE::
+
+The maximum size of a request that can be saved in bytes. Requests are buffered in a few situations, the main ones being SSL
+renegotiation and saving post data when using FORM based auth. Defaults to 16,384 bytes.
+
+RECORD_REQUEST_START_TIME::
+
+If the server should record the start time of a HTTP request. This is necessary if you wish to log or otherwise use
+the total request time, however has a slight performance impact, as it means that `System.nanoTime()` must be called for
+each request. Defaults to false.
+
+IDLE_TIMEOUT::
+
+The amount of time a connection can be idle for before it is timed out. An idle connection is a connection that has had
+no data transfer in the idle timeout period. Note that this is a fairly coarse grained approach, and small values will
+cause problems for requests with a long processing time.
+
+REQUEST_PARSE_TIMEOUT::
+
+How long a request can spend in the parsing phase before it is timed out. This timer is started when the first bytes
+of a request are read, and finishes once all the headers have been parsed.
+
+NO_REQUEST_TIMEOUT::
+
+The amount of time a connection can sit idle without processing a request, before it is closed by the server.
+
+ENABLE_CONNECTOR_STATISTICS::
+
+If this is true then the connector will record statistics such as requests processed and bytes sent/received. This has
+a performance impact, although it should not be noticeable in most cases.
+
+==== ALPN
+
+`io.undertow.server.protocol.http.AlpnOpenListener`
+
+Note that the HTTP2 and SPDY connectors require the use of ALPN. Unfortunatly java does not provide a standard way of performing
+ALPN at this time, so it is necessary to run java with a 3rd party ALPN library on the boot class path. For more information
+see the link:http://eclipse.org/jetty/documentation/current/alpn-chapter.html[Jetty ALPN documentation].
+
+SPDY and HTTP2 should use the ALPN open listener to handle the ALPN protocol negotiation.
+
+==== HTTP Listener
+
+`io.undertow.server.protocol.http.HttpOpenListener`
+
+The HTTP listener is the most commonly used listener type, and deals with HTTP/1.0 and HTTP/1.1. It only takes one additional option.
+
+ENABLE_HTTP2::
+
+If this is true then the connection can be processed as a HTTP2 'prior knowledge' connection. If a HTTP2 connects directly
+to the listener with a HTTP2 connection preface then the HTTP2 protocol will be used instead of HTTP/1.1.
+
+==== AJP Listener
+
+`io.undertow.server.protocol.ajp.AjpOpenListener`
+
+The AJP listener allows the use of the AJP protocol, as used by the apache modules mod_jk and mod_proxy_ajp. It is a binary
+protocol that is slightly more efficient protocol than HTTP, as some common strings are replaced by integers. If the front
+end load balancer supports it then it is recommended to use HTTP2 instead, as it is both a standard protocol and more efficient.
+
+==== HTTP2 Listener
+
+
+
+==== SPDY Listener
+
+`io.undertow.server.protocol.spdy.SpdyOpenListener`
+
+The SPDY protocol is an experimental protocol designed by Google, that formed the basis of HTTP2. Now that HTTP2 has been
+adopted by browser vendors it should be used instead.
+
+// end::main[]

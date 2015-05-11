@@ -1,0 +1,111 @@
+// tag::main[]
+
+=== Security
+
+Undertow has a flexible security architecture that provides several built in authentication mechanisms,
+as well as providing an API to allow you to provide custom mechanisms. Mechanisms can be combined (as
+much as the relevant specifications allow). This document covers the details of the core Undertow
+security API. For details on how these are used in servlet deployments see link:../servlet/security.html[Servlet Security].
+
+==== The SecurityContext
+
+The core of Undertow's security architecture is the SecurityContext. It is accessible via the
+`HttpServerExchange.getSecurityContext()` method. The security context is responsible for maintaining
+all security related state for the request, including configured authentication mechanisms and the
+current authenticated user.
+
+==== Security Handlers
+
+Security within Undertow is implemented as a set of asynchronous handlers and a set of authentication
+mechanisms co-ordinated by these handlers.
+
+Early in the call chain is a handler called `SecurityInitialHandler`, this is where the security processing
+beings, this handler ensures that an empty `SecurityContext` is set on the current `HttpServerExchange`
+
+* Allow authentication to occur in the call as early as possible.
+* Allows for use of the mechanisms in numerous scenarios and not just for servlets.
+
+The `SecurityContext` is responsible for both holding the state related to the currently authenticated user
+and also for holding the configured mechanisms for authentication (`AuthenticationMechanism`) and providing 
+methods to work with both of these. As this `SecurityContext` is replacable a general configuration
+can be applied to a complete server with custom configuration replacing it later in the call.
+
+After the `SecurityContext` has been established subseqeunt handlers can then add authentication mechanisms
+to the context, to simplify this Undertow contains a handler called `AuthenticationMechanismsHandler`
+this handler can be created with a set of `AuthenticationMechanism` mechanisms and will set them all on the
+established `SecurityContext`.  Alternatively custom handlers could be used to add mechanisms one at a time
+bases on alternative requirements.
+
+The next handler in the authentication process is the `AuthenticationConstraintHandler`, this handler is
+responsible for checking the current request and identifying if authentication should be marked as being
+required for the current request. This handler can take a link:predicates-attributes-handlers.html[Predicate]
+that makes a decision about if the request requires authentication.
+
+The final handler in this chain is the `AuthenticationCallHandler`, this handler is responsible for
+ensuring the `SecurityContext` is called to actually perform the authentication process, depending
+on any identified constraint this will either mandate authentication or only perform authentication
+if appropriate for the configured mechanisms.
+
+There is no requirement for these handlers to be executed consecutively, the only requirement is that first
+the `SecurityContext` is established, then the authentications and constrain check can be
+performed in any order and finally the `AuthenticationCallHandler` must be used before any processing of
+a potentially protected resource is called.
+
+image::security_handlers.png["An Example Security Chain",title="An Example Security Chain"]
+
+Security mechanisms that are to be used must implement the following interface: -
+
+[source%nowrap,java]
+----
+public interface AuthenticationMechanism {
+
+    AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange, final SecurityContext securityContext);
+
+    ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext);
+}
+----
+
+The `AuthenticationMechanismOutcome` is used by the mechanism to indicate the status of the attempted authentication.
+
+The three options are:
+
+* **AUTHENTICATED** - The authentication was successful. No further methods will be tried and no challenge will be sent.
+
+* **NOT_ATTEMPTED** - There was not enough information available to attempt an authentication. The next mechanism will be
+tried. If this was the last mechanism and authentication is required then a challenge will be sent by calling the
+`sendChallenge` method on all the mechanisms in order. If authentication is not required then the request will
+proceed with no authenticated principal.
+
+* **NOT_AUTHENTICATED** - The authentication failed, usually this is due to invalid credentials. The authentication process
+will not proceed further, and a new challenge will be sent to the client.
+
+Regardless of if authentication has been flagged as being required when the request reaches the `AuthenticationCallHandler` the
+`SecurityContext` is called to commence the process.  The reason this happens regardless of if authentication is flagged as
+required is for a few reasons:
+
+* The client may have sent additional authentication tokens and have expectations the response will take these into account.
+* We may be able to verify the remote user without any additional rount trips, especially where authentication has already occurred.
+* The authentication mechanism may need to pass intermediate updates to the client so we need to ensure any inbound tokens are valid.
+
+When authentication runs the `authenticate` method on each configured `AuthenticationMechanism` is called in turn, this continues
+until one of the following occurs:
+
+* A mechanism successfully authenticates the request and returns `AUTHENTICATED`.
+* A mechanism attempts but does not complete authentication and returns `NOT_AUTHENTICATED`.
+* The list of mechanisms is exhausted.
+
+At this point if the response was `AUTHENTICATED` then the request will be allowed through and passed onto the next handler.
+
+If the request is `NOT_AUTHENTICATED` then either authentication failed or a mechanism requires an additional round trip with the
+client, either way the `sendChallenge` method of each defined `AuthenticationMethod` is called in turn and the response sent back
+to the client.  All mechanisms are called as even if one mechanism is mid-authentication the client can still decide to abandon
+that mechanism and switch to an alternative mechanism so all challenges need to be re-sent.
+
+If the list of mechanisms was exhausted then the previously set authentication constraint needs to be checked, if authentication was
+not required then the request can proceed to the next handler in the chain and that will be then of authentication for this request
+(unless a later handler mandates authentication and requests authentication is re-atempted).  If however authentication was required
+then as with a `NOT_AUTHENTICATED` response each mechanism has `sendChallenge` called in turn to generate an authentication challenge
+to send to the client.
+
+
+// end::main[]

@@ -1,0 +1,59 @@
+// tag::main[]
+
+=== Undertow Request Lifecyle
+
+This document covers the lifecycle of a web request from the point of view of the Undertow server.
+
+When a connection is established XNIO invokes the `io.undertow.server.HttpOpenListener`, this listener
+creates a new `io.undertow.server.HttpServerConnection` to hold state associated with this connection,
+and then invokes `io.undertow.server.HttpReadListener`.
+
+The HTTP read listener is responsible for parsing the incoming request, and creating a new
+`io.undertow.server.HttpServerExchange` to store the request state. The exchange object contains both the request
+and response state.
+
+At this point the request and response channel wrappers are setup, that are responsible for decoding and encoding
+the request and response data.
+
+The root handler is then executed via `io.undertow.server.HttpHandlers#executeRootHandler`. Handlers are chained
+together, and each handler can modify the exchange, send a response, or delegate to a different handler. At this point
+there are a few different things that can happen:
+
+- The exchange can be finished. This happens when both the request and response channels are closed. If a content
+length is set then the channel will automatically close once all the data has been written. This can also be forced
+by calling `HttpServerExchange.endExchange()`, and if no data has been written yet any default response listeners
+that have been registered with the exchange will be given the opportunity to generate a default response, such as
+an error page. Once the current exchange is finished the exchange completion listeners will be run. The last completion
+listener will generally start processing the next request on the connection, and will have been setup by the read listener.
+
+
+- The exchange can be dispatched by calling one of the `HttpServerExchange.dispatch` methods. This is similar to
+the servlet `startAsync()` method. Once the call stack returns then the dispatch task (if any) will be run in
+the provided executor (if no executor is provided it will be ran by the XNIO worker). The most common use of a
+dispatch is to move from executing in an IO thread (where blocking operations are not allowed), to a worker thread
+that can block. This pattern looks like:
+
+
+[source%nowrap,java]
+----
+public void handleRequest(final HttpServerExchange exchange) throws Exception {
+    if (exchange.isInIoThread()) {
+      exchange.dispatch(this);
+      return;
+    }
+    //handler code
+}
+----
+
+- Reads/Writes can be resumed on a request or response channel. Internally this is treated like a dispatch,
+and once the call stack returns the relevant channel will be notified about IO events. The reason why the operation
+does not take effect until the call stack returns is to make sure that we never have multiple threads acting in the
+same exchange.
+
+- The call stack can return without the exchange being dispatched. If this happens `HttpServerExchange.endExchange()`
+will be called, and the request will be finished.
+
+- An exception can be thrown. If this propagates all the way up the call stack the exchange will be ended with a 500
+response code.
+
+// end::main[]

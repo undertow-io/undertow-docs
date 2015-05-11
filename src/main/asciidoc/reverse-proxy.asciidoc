@@ -1,0 +1,47 @@
+// tag::main[]
+
+=== Reverse Proxy
+
+Undertow's reverse proxy is implemented as a handler, and as such it can be used like any other handler.
+
+An instance of the handler can be created using the `io.undertow.Handlers#proxyHandler` method. It takes two parameters,
+a `ProxyClient` instance and the next handler to invoke if the client does not know how to proxy a request (often just
+a handler that returns a 404). It is also possible to specify the maximum request time, after which time a request will
+be terminated.
+
+Undertow provides two instances of `ProxyClient` (there is a third one under development that has mod_cluster support).
+Note that all proxy clients use the Undertow HTTP client API. At the moment this provides support for HTTP and AJP
+backends.
+
+The provided proxy clients are:
+
+io.undertow.server.handlers.proxy.SimpleProxyClientProvider::
+
+A proxy client that just forwards to another server. It takes the servers URI as a constructor parameter, and then will
+forward all requests to the target server. Connections are maintained on a one to one basis, a connection to the front
+end server results in a new connection to the back end server.
+
+io.undertow.server.handlers.proxy.LoadBalancingProxyClient::
+
+A load balancing proxy client that forwards requests to servers in a round robin fashion, unless sticky sessions have
+been enabled in which case requests with a session cookie will always be forwarded to the same server.
+
+Target servers can be added to the client using the `addHost` method, which takes the server URI to connect to and an
+optional node ID to use for sticky sessions.
+
+The load balancing proxy maintain a pool of connections to each backend server. The number of connections in the pool is
+determined by the parameter `connectionsPerThread`, which specifies the maximum number of connections per IO thread (so
+to get the total number of connections multiply this by the number of IO threads). The reason why this pool is maintain
+by thread is to make sure that both the frontend and backend connections use the same thread, so the proxy client
+does not have to deal with threading issues.
+
+In general the client connects to servers one after the other in a round robin fashion, skipping any servers that are
+either full (i.e. all connections in the pool are in use) or in a problem state (which happens if a connection attempt
+fails). Servers that are in the problem state will be queried every so often (controlled by `problemServerRetry`) to see
+if they have recovered.
+
+HTTP Upgrade (including websockets) is fully supported for HTTP based backends. When a HTTP upgrade occurs the
+connection is taken out of the pool and takes on a one to one relationship with the front end connection. Upgraded
+connections to not count towards the backend connection limit.
+
+// end::main[]

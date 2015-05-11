@@ -1,0 +1,144 @@
+// tag::main[]
+
+=== Using non-blocking handlers with servlet
+
+When using servlet deployments in Undertow is is possible to mix and match servlets and Undertow native handlers.
+
+This is achieved via the `io.undertow.servlet.ServletExtension` interface. This interface allows you to customise
+a servlet deployment before it is deployed, including wrapping the servlet handler chain with your own handlers.
+
+Lets get started. First we need a `ServletExtension` implementation:
+
+[source%nowrap,java]
+----
+package io.undertow.example.nonblocking;
+
+import io.undertow.Handlers;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.spec.ServletContextImpl;
+
+public class NonBlockingHandlerExtension implements ServletExtension {
+    @Override
+    public void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext) {
+        deploymentInfo.addInitialHandlerChainWrapper(new HandlerWrapper() {
+            @Override
+            public HttpHandler wrap(final HttpHandler handler) {
+                return Handlers.path()
+                        .addPrefixPath("/", handler)
+                        .addPrefixPath("/hello", new HelloWorldHandler());
+            }
+        });
+    }
+}
+----
+
+Now we need a handler:
+
+[source%nowrap,java]
+----
+public class HelloWorldHandler implements HttpHandler {
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
+        exchange.getResponseSender().send("Hello World");
+    }
+}
+----
+
+We now need to register this extension. This uses to standard java service loader mechanism, so we need to create a
+`WEB-INF/classes/META-INF/services/io.undertow.servlet.ServletExtension` file that contains the name of our extension
+class.
+
+Now when you deploy your war to Wildfly you should be able to navigate to `/mywar/hello` and your custom handler will be
+invoked.
+
+Lets see exactly what is going on here. When the deployment is about to deploy the `handleDeployment` method is
+invoked. This method is passed the `io.undertow.servlet.api.DeploymentInfo` structure, that contains a complete
+description of the deployment. One of the things that this contains is a list of handler chain wrappers. These wrappers
+allow you to add additional handlers before the servlet handler.
+
+In our wrapper we create an `io.undertow.server.handlers.PathHandler`, which is a handler provided by undertow that
+maps handlers to paths. We register two different handlers into the path handler, our custom handler under `/hello`,
+and the servlet handler under `/`. These paths are relative to the root of the servlet context (techinically they are
+relative to the last resolved path, so if you chain two path handlers together the second paths will be resolved relative
+to the first one).
+
+In our handler we simply set a Content-Type header and then send a "Hello World" response via async IO.
+
+
+==== A slightly more complex example
+
+Say we are serving up an application, and we decide that we would like to serve all our +.js+ and +.css+ files using an
+async handler, as we want to avoid the overhead of a servlet request.
+
+To do this we are going to create a handler that checks the extension on the incoming request, and if it is +.js+ or
++.css+ then it will serve the file directly, bypassing servlet all together.
+
+WARNING: This will bypass all servlet handlers, including security handlers, so security rules will not be applied for
+these handlers.
+
+[source%nowrap,java]
+----
+public class NonBlockingHandlerExtension implements ServletExtension {
+    @Override
+    public void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext) {
+        deploymentInfo.addInitialHandlerChainWrapper(new HandlerWrapper() {
+            @Override
+            public HttpHandler wrap(final HttpHandler handler) {
+
+                final ResourceHandler resourceHandler = new ResourceHandler()
+                        .setResourceManager(deploymentInfo.getResourceManager());
+
+                PredicateHandler predicateHandler = new PredicateHandler(Predicates.suffixs(".css", ".js"), resourceHandler, handler);
+
+                return predicateHandler;
+            }
+        });
+    }
+}
+----
+
+Lets go through this line by line:
+
+[source%nowrap,java]
+----
+final ResourceHandler resourceHandler = new ResourceHandler()
+    .setResourceManager(deploymentInfo.getResourceManager());
+----
+
+A resource handler is a handler provided by Undertow that serves resources from a resource manager. This is basically just
+an abstraction that allows us to re-use the file serving code no matter where a file in coming from. For example undertow
+provides several default resource manager implementations:
+
+io.undertow.server.handlers.resource.FileResourceManager::
+A resource manager that serves files from the file system
+
+io.undertow.server.handlers.resource.ClassPathResourceManager::
+A resource manager that serves files from the class path
+
+io.undertow.server.handlers.resource.CachingResourceManager::
+A resource manger that wraps another resource manger, and provides caching.
+
+You do not need to worry about what type of resource manager is in use here, all you need to know is that this is the
+resource manager that is being used by the default servlet, so serving files from this resource manager will mirror
+the behaviour of the default servlet.
+
+We now need to wire up our resource handler so it is only used for +.js+ and +.css+. We could simply write a handler
+that checks the file extension and delegates accordingly, however Undertow already provides us with one:
+
+[source%nowrap,java]
+----
+PredicateHandler predicateHandler = new PredicateHandler(Predicates.suffixs(".css", ".js"), resourceHandler, handler);
+----
+
+A `PredicateHandler` chooses between two different handlers based on the result of a predicate that is applied to the
+exchange. In this case we are using a suffix predicate, that will return `true` if the request ends with +.js+ or +.css+.
+
+When this predicate returns true our resource handler will be invoked, otherwise the request will be delegated to the servlet
+container as normal.
+
+// end::main[]

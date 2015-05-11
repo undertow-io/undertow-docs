@@ -1,0 +1,39 @@
+digraph example {
+
+	shape="box";
+
+    http[label="Http Connector", shape=box];
+    http_persistent_connection[label="HTTP persistent connection handler"];
+    virtual_host[label="Virtual host handler"];
+
+    https[label="Https Connector", shape=box];
+    spdy[label="SPDY Connector", shape=box];
+
+    simple_error_page[label="Simple Error Page Handler"];
+
+    response_404[label="404 Handler"];
+
+    file_error_page[label="Custom File Error Page Handler"];
+    session_handler[label="Session Attachment Handler"];
+    file_based_session_store[label="File Based Session Store", shape=pentagon];
+    security_handler[label="Security Handler"];
+    path_handler[label="Path Handler"];
+    servlet_dispatch_handler2[label="Servlet Dispatch Handler2"];
+    servlet_dispatch_handler1[label="Servlet Dispatch Handler1"];
+
+
+    http -> http_persistent_connection -> simple_error_page;
+    https -> http_persistent_connection;
+    spdy -> simple_error_page;
+    simple_error_page -> virtual_host;
+
+    virtual_host -> response_404 [label="No Host: match"];
+    virtual_host -> file_error_page [label = "www.mysite.net"];
+    file_error_page -> session_handler;
+    file_based_session_store -> session_handler[dir=both];
+    session_handler -> security_handler [style=dotted, label="Async callback when session is loaded from disk"];
+    security_handler -> path_handler;
+    path_handler -> servlet_dispatch_handler1[label="/servlet1"];
+    path_handler -> servlet_dispatch_handler2[label="/servlet2"];
+
+}

@@ -1,0 +1,93 @@
+
+// tag::main[]
+
+=== Error Handling
+
+
+Error handling is accomplished by through the use of default response listeners. These are listeners that can generate
+a response if the exchange is ended without a response being sent.
+
+NOTE: This is completely different to Servlet error handling. Servlet error handling is implemented as part of Undertow
+Servlet, and follows the standard Servlet rules.
+
+In general there are two types of errors that we need to worry about, handlers that throw exceptions or handlers that
+set an error response code and then call `HttpServerExchange.endExchange()`.
+
+==== Exceptions
+
+
+The easiest way to handle exceptions is to catch them in an outer handler. For example:
+
+[source%nowrap,java]
+----
+public class ErrorHandler implements HttpHandler {
+
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        try {
+            next.handleRequest(exchange);
+        } catch (Exception e) {
+            if(exchange.isResponseChannelAvailable()) {
+                //handle error
+            }
+        }
+    }
+}
+----
+
+The allows you application to handle exceptions in whatever manner you see fit.
+
+If the exception propagates out of the handler chain a 500 response code will be set and the exchange can be ended.
+
+==== Default Response Listeners
+
+Default response listener allow you to generate a default page if the exchange is ended without a response body. These
+handlers should test for an error response code, and then generate an appropriate error page.
+
+Note that these handlers will be run for all requests that terminate with no content, but generating default content for
+successful requests will likely cause problems.
+
+Default response listeners can be registered via the
+`HttpServerExchange#addDefaultResponseListener(DefaultResponseListener)` method. They will be called in the reverse order
+that they are registered, so the last handler registered is the first to be called.
+
+The following example shows a handler that will generate a simple next based error page for 500 errors:
+
+[source%nowrap,java]
+----
+
+public class SimpleErrorPageHandler implements HttpHandler {
+
+    private final HttpHandler next;
+
+    public SimpleErrorPageHandler(final HttpHandler next) {
+        this.next = next;
+    }
+
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        exchange.addDefaultResponseListener(new DefaultResponseListener() {
+            @Override
+            public boolean handleDefaultResponse(final HttpServerExchange exchange) {
+                if (!exchange.isResponseChannelAvailable()) {
+                    return false;
+                }
+                Set<Integer> codes = responseCodes;
+                if (exchange.getResponseCode() == 500) {
+                    final String errorPage = "<html><head><title>Error</title></head><body>Internal Error</body></html>";
+                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
+                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html");
+                    Sender sender = exchange.getResponseSender();
+                    sender.send(errorPage);
+                    return true;
+                }
+                return false;
+            }
+        });
+        next.handleRequest(exchange);
+    }
+}
+----
+
+
+// end::main[]

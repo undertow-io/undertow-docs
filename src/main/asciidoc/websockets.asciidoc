@@ -1,0 +1,31 @@
+// tag::main[]
+
+=== Websockets
+
+Undertow provides support for Websockets out of the box. Undertow core provides a XNIO based API,
+which uses the Xnio Channel interface to provide access to the web socket at a low level.
+
+Most users will want a higher level interface than this, and to that end Undertow also provides a JSR-356
+implementation. This implementation is part of a separate jar, to use it you must make sure that you have the
+`undertow-servlet` and `undertow-websocket-jsr` artifacts on your class path. Servlet support is required because the
+JSR-356 API is based on the Servlet API.
+
+For maven users the following snippet should be added to your pom.xml:
+
+
+[source%nowrap,xml]
+----
+<dependency>
+  <groupId>io.undertow</groupId>
+  <artifactId>undertow-servlet</artifactId>
+  <version>${version.io.undertow}</version>
+</dependency>
+
+<dependency>
+  <groupId>io.undertow</groupId>
+  <artifactId>undertow-websockets-jsr</artifactId>
+  <version>${version.io.undertow}</version>
+</dependency>
+----
+
+// end::main[]

@@ -1,0 +1,39 @@
+// tag::main[]
+
+
+=== JSP
+
+JSP can be used in Undertow through the use of the link:https://github.com/undertow-io/jastow[Jastow] project, which is
+a fork of Apache Jasper for use in Undertow (note that 'fork' is used very loosely here, it is basically just Jasper with
+its Tomcat dependencies removed).
+
+Jasper provides all its functionality though a Servlet, as a result can be added to a standard Undertow servlet deployment
+by adding the JSP servlet to the '*.jsp' mapping.
+
+There are also some additional context parameters that JSP requires, and Jastow provides a helper class to set these up.
+
+An example of how to set up a JSP deployment is shown below:
+
+[source%nowrap,xml]
+----
+final PathHandler servletPath = new PathHandler();
+final ServletContainer container = ServletContainer.Factory.newInstance();
+
+DeploymentInfo builder = new DeploymentInfo()
+        .setClassLoader(SimpleJspTestCase.class.getClassLoader())
+        .setContextPath("/servletContext")
+        .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+        .setDeploymentName("servletContext.war")
+        .setResourceManager(new TestResourceLoader(SimpleJspTestCase.class))
+        .addServlet(JspServletBuilder.createServlet("Default Jsp Servlet", "*.jsp"));
+JspServletBuilder.setupDeployment(builder, new HashMap<String, JspPropertyGroup>(), new HashMap<String, TagLibraryInfo>(), new MyInstanceManager());
+
+DeploymentManager manager = container.addDeployment(builder);
+manager.deploy();
+servletPath.addPrefixPath(builder.getContextPath(), manager.start());
+----
+
+Note that JSP tags are created using an instance of the Jasper `InstanceManager` interface. If you do not require injection
+into tags then this interface can simply create a new instance using reflection.
+
+// end::main[]

@@ -1,0 +1,125 @@
+// tag::main[]
+
+=== Bootstrapping Undertow
+
+
+There are two ways to bootstrap Undertow. The first and most simple is to use the `io.undertow.Undertow` builder API.
+The second is to assemble a server using XNIO and the Undertow listener classes directly. This second approach requires
+more code, but gives more flexibility. It is anticipated that for most use cases the builder API will be sufficient.
+
+One thing that it is important to understand about Undertow is that there is not really any concept of an Undertow
+container. Undertow applications are assembled from multiple handler classes, and it is up to the embedding application
+to manage the lifecycle of all the these handlers. This was a deliberate design decision in order to give the embedding
+application as much control as possible. This is generally only an issue if you have handlers that hold resources that
+need to be cleaned up at server stop.
+
+==== The Builder API
+
+
+The builder API is accessed using the `io.undertow.Undertow` class. We will start by looking at a simple example:
+
+
+[source%nowrap,java]
+----
+public class HelloWorldServer {
+
+    public static void main(final String[] args) {
+        Undertow server = Undertow.builder()
+                .addHttpListener(8080, "localhost")
+                .setHandler(new HttpHandler() {
+                    @Override
+                    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
+                        exchange.getResponseSender().send("Hello World");
+                    }
+                }).build();
+        server.start();
+    }
+}
+----
+
+The above example starts a simple server that returns 'Hello World' to all requests. The server will listen on the
+`localhost` address on port 8080 until the `server.stop()` method is called. When requests arrive they will be handled
+by the first (and only) handler in the handler chain, which in this case simply sets a header and writes some content
+(more information on handlers can be found in the link:undertow-handler-guide.html[handlers guide].
+
+The builder will try and pick sensible defaults for all performance related parameters such as number of threads and
+buffer sizes, however all these can be overridden directly using the builder. These options and their effects are
+detailed in the link:listeners.html[listeners guide], and will not be repeated here.
+
+Note that because of the flexibility of Undertow there are likely several general purpose handlers that you will always
+want to include in your server (e.g. the date handler, that adds a date header to all responses). For more information
+see the link:undertow-handler-guide.html[handlers guide].
+
+==== Assembling a Server Manually
+
+
+If you do not want to use the builder API then there are a few steps that you need to follow to create a server:
+
+. Create an XNIO Worker
+. Create an XNIO SSL instance (optional)
+. Create an instance of the relevant Undertow listener class
+. Open a server socket using XNIO and set its accept listener
+
+The code for HTTP, HTTPS and AJP listeners is shown below:
+
+[source%nowrap,java]
+----
+Xnio xnio = Xnio.getInstance();
+
+XnioWorker worker = xnio.createWorker(OptionMap.builder()
+        .set(Options.WORKER_IO_THREADS, ioThreads)
+        .set(Options.WORKER_TASK_CORE_THREADS, workerThreads)
+        .set(Options.WORKER_TASK_MAX_THREADS, workerThreads)
+        .set(Options.TCP_NODELAY, true)
+        .getMap());
+
+OptionMap socketOptions = OptionMap.builder()
+        .set(Options.WORKER_IO_THREADS, ioThreads)
+        .set(Options.TCP_NODELAY, true)
+        .set(Options.REUSE_ADDRESSES, true)
+        .getMap();
+
+Pool<ByteBuffer> buffers = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR,bufferSize, bufferSize * buffersPerRegion);
+
+
+if (listener.type == ListenerType.AJP) {
+    AjpOpenListener openListener = new AjpOpenListener(buffers, serverOptions, bufferSize);
+    openListener.setRootHandler(rootHandler);
+    ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
+    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
+    server.resumeAccepts();
+} else if (listener.type == ListenerType.HTTP) {
+    HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap(), bufferSize);
+    openListener.setRootHandler(rootHandler);
+    ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
+    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
+    server.resumeAccepts();
+} else if (listener.type == ListenerType.HTTPS){
+    HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap(), bufferSize);
+    openListener.setRootHandler(rootHandler);
+    ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
+    XnioSsl xnioSsl;
+    if(listener.sslContext != null) {
+        xnioSsl = new JsseXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), listener.sslContext);
+    } else {
+        xnioSsl = xnio.getSslProvider(listener.keyManagers, listener.trustManagers, OptionMap.create(Options.USE_DIRECT_BUFFERS, true));
+    }
+    AcceptingChannel <SslConnection> sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptions);
+    sslServer.resumeAccepts();
+}
+----
+
+As you can see it is quite a bit more code than just using the builder, however it does provide some flexibility that
+the builder does not:
+
+- Complete control over all options
+- Ability to use different buffer pools and workers for each listener
+- XnioWorker instances can be shared between different server instances
+- Buffer pools can be shared between different server instances
+- Listeners can be given different root handlers
+
+In most cases this level of control is not necessary, and it is better to simply use the builder API.
+
+
+// end::main[]

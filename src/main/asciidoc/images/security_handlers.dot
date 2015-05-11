@@ -1,0 +1,11 @@
+digraph security_handlers {
+    initial[label="SecurityInitialHandler"];
+    mechs[label="AuthenticationMechanismsHandler"];
+    const[label="AuthenticationConstraintHandler"];
+    call[label="AuthenticationCallHandler"];
+
+
+    initial->mechs [label="handleRequest(...)"];
+    mechs->const [label="handleRequest(...)"];
+    const->call [label="handleRequest(...)"];
+}

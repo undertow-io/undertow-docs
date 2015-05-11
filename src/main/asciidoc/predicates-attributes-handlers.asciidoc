@@ -1,0 +1,253 @@
+// tag::main[]
+
+=== Predicates Attributes and Handlers
+
+
+====  Introduction
+
+Predicates and Exchange attributes are an abstraction that allow handlers to read, write and make decisions based on
+certain attributes of a request without hard coding this into the handler. These form the basis of Undertow's text
+based handler configuration format. Some examples are shown below:
+
+
+Use the reverse proxy to send all requests to /reports to a different backend server:
+
+[source]
+----
+path-prefix['/reports'] -> reverse-proxy[{'http://reports1.mydomain.com','http://reports2.mydomain.com'}]
+----
+
+Redirect all requests from /a to /b. The first example only redirects if there is an exact match, the later examples
+match all paths that start with /a:
+
+[source]
+----
+path['/a'] -> redirect['/b']
+path-prefix['/a'] -> redirect['/b${remaining}']
+regex['/a(.*)'] -> set[attribute='%{o,Location}', value='/b${1}'] -> response-code[302]
+----
+
+==== Exchange Attributes
+
+An exchange attribute represents the value of part of the exchange. For example the path attribute represents the
+request path, the method attribute represents the HTTP. Even though these attributes can be retrieved and modified
+directly this requires a handler to hard code the attribute that they wish to use. For example Undertow provides a
+handler that checks an attribute against an access control list. There are lots of different attributes we may wish
+to check against the ACL (e.g. username, User-Agent header, request path).
+
+==== Predicates
+
+A predicate is a function that takes a value (in this case the `HttpServerExchange`) and returns a true or false value.
+This allows actions to be taken based on the return value of the predicate. In general any handler that needs to make
+a boolean decision based on the exchange should use a predicate to allow for maximum flexibility.
+
+The provided predicate handler can be used to make a decision between which handler to invoke based on the value of a
+predicate.
+
+==== Programmatic Representation of Exchange Attributes
+
+An exchange attribute is represented by the `io.undertow.attribute.ExchangeAttribute` interface:
+
+[source%nowrap,java]
+----
+
+/**
+ * Representation of a string attribute from a HTTP server exchange.
+ */
+public interface ExchangeAttribute {
+
+    /**
+     * Resolve the attribute from the HTTP server exchange. This may return null if the attribute is not present.
+     * @param exchange The exchange
+     * @return The attribute
+     */
+    String readAttribute(final HttpServerExchange exchange);
+
+    /**
+     * Sets a new value for the attribute. Not all attributes are writable.
+     * @param exchange The exchange
+     * @param newValue The new value for the attribute
+     */
+    void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException;
+}
+
+----
+
+Undertow provides implementation of a lot of attributes out of the box, most of which can be accessed using the
+`io.undertow.attribute.ExchangeAttributes` utility class. Some of the attributes that are provided include request and
+response headers, cookies, path, query parameters, the current user and more.
+
+==== Programmatic Representation of Predicates
+
+Predicates are represented by the `io.undertow.predicate.Predicate` interface:
+
+[source%nowrap,java]
+----
+/**
+ * A predicate.
+ *
+ * This is mainly uses by handlers as a way to decide if a request should have certain
+ * processing applied, based on the given conditions.
+ */
+public interface Predicate {
+
+    /**
+     * Attachment key that can be used to store additional predicate context that allows the predicates to store
+     * additional information. For example a predicate that matches on a regular expression can place additional
+     * information about match groups into the predicate context.
+     *
+     * Predicates must not rely on this attachment being present, it will only be present if the predicate is being
+     * used in a situation where this information may be required by later handlers.
+     *
+     */
+    AttachmentKey<Map<String, Object>> PREDICATE_CONTEXT = AttachmentKey.create(Map.class);
+
+    boolean resolve(final HttpServerExchange value);
+
+}
+----
+
+Undertow provides built in predicates that can be created using the `io.undertow.predicate.Predicates` utility class.
+This includes basic boolean logic predicates (and, or and not), as well as other useful predicates such as path
+matching (including prefix and suffix based matches), regular expression matching, contains and exists. Many of these
+predicates operate on exchange attributes, so they can be used to match arbitrary parts of the exchange. The following
+example demonstrates a predicate that matches any exchange that has no Content-Type header where the method is POST:
+
+[source%nowrap,java]
+----
+Predicate predicate = Predicates.and(
+        Predicates.not(Predicates.exists(ExchangeAttributes.requestHeader(Headers.CONTENT_TYPE))),
+        Predicates.equals("POST", ExchangeAttributes.requestMethod()));
+----
+
+==== Textual Representation
+
+WARNING: Undertows predicate language is still considered tech preview. Its syntax will likely change in a future version
+as the language is expanded.
+
+All these attributes and predicates are all well and good, but unless there is a way for the end user to configure them
+without resorting to programmatic means they are not super useful. Fortunately Undertow provides a way to do just that.
+
+==== Exchange Attributes
+
+Exchange attributes may have up to two textual representations, a long one and a short one. The long version takes the
+form %{attribute}, while the short version is a percent sign followed by a single character. A list of the built in
+attributes provided by Undertow is below:
+
+[frame="topbot",options="header"]
+|==========================
+|Attribute                                                                    |Short Form|Long Form
+|Remote IP address                                                            | `%a`     | `%{REMOTE_IP}`
+|Local IP address                                                             | `%A`     | `%{LOCAL_IP}`
+|Bytes sent, excluding HTTP headers, or '-' if no bytes were sent             | `%b`     |
+|Bytes sent, excluding HTTP headers                                           | `%B`     | `%{BYTES_SENT}`
+|Remote host name                                                             | `%h`     |
+|Request protocol                                                             | `%H`     | `%{PROTOCOL}`
+|Remote logical username from identd (always returns '-')                     | `%l`     |
+|Request method                                                               | `%m`     | `%{METHOD}`
+|Local port                                                                   | `%p`     | `%{LOCAL_PORT}`
+|Query string (prepended with a '?' if it exists, otherwise an empty string)  | `%q`     | `%{QUERY_STRING}`
+|First line of the request                                                    | `%r`     | `%{REQUEST_LINE}`
+|HTTP status code of the response                                             | `%s`     | `%{RESPONSE_CODE}`
+|Date and time, in Common Log Format format                                   | `%t`     | `%{DATE_TIME}`
+|Remote user that was authenticated                                           | `%u`     | `%{REMOTE_USER}`
+|Requested URL path                                                           | `%U`     | `%{REQUEST_URL}`
+|Request relative path                                                        | `%R`     | `%{RELATIVE_PATH}`
+|Local server name                                                            | `%v`     | `%{LOCAL_SERVER_NAME}`
+|Time taken to process the request, in millis                                 | `%D`     | `%{RESPONSE_TIME}`
+|Time taken to process the request, in seconds                                | `%T`     |
+|Current request thread name                                                  | `%I`     | `%{THREAD_NAME}`
+|SSL cypher                                                                   |          | `%{SSL_CIPHER}`
+|SSL client certificate                                                       |          | `%{SSL_CLIENT_CERT}`
+|SSL session id                                                               |          | `%{SSL_SESSION_ID}`
+|Cookie value                                                                 |          | `%{c,cookie_name}`
+|Query parameter                                                              |          | `%{q,query_param_name}`
+|Request header                                                               |          | `%{i,request_header_name}`
+|Response header                                                              |          | `%{o,response_header_name}`
+|Value from the predicate context                                             |          | `${name}`
+|==========================
+
+Any tokens that do not follow one of the above patterns are assumed to be literals. For example assuming a
+user name of 'Stuart' and a request method of 'GET' the attribute text `Hello %u the request method is %m` will give
+the value +Hello Stuart the request method is GET+.
+
+These attributes are used anywhere that text based configuration is required, e.g. specifying the log pattern in the
+access log.
+
+Some handlers may actually modify these attributes. In order for this to work the attribute must not be read only, and
+must consist of only a single token from the above table.
+
+==== Textual Representation Predicates
+
+Sometimes it is also useful to have a textual representation of a predicate. For examples when configuring a handler
+in Wildfly we may want it only to run if a certain condition is met, and when doing rewrite handling we generally do
+not want to re-write all requests, only a subset of them.
+
+To this end Undertow provides a way to specify a textual representation of a predicate. In its simplest form, a
+predicate is represented as `predicate-name[name1=value1,name2=value2]`.
+
+For example, the following predicates all match POST requests:
+
+[source]
+----
+method[POST]
+method[value=POST]
+equals[{%{METHOD}, POST}]
+equals[%m, "POST"]
+regex[pattern="POST", value="%m", full-match=true]
+----
+
+Lets examine these a bit more closely. The first one `method[POST]` uses the built in method predicate that matches
+based on the method. As this predicate takes only a single parameter (that is the default parameter) it is not necessary
+to explicitly specify the parameter name. Also note that POST is not quoted, quoting is only necessary if the token
+contains spaces, commas or square braces.
+
+The second example `method[value=POST]` is the same as the first, except that the parameter name is explicitly specified.
+
+The third and fourth examples demonstrates the 'equals' predicate. This predicate actually takes one parameter that is an
+array, and will return true if all items in the array are equal. Arrays are generally enclosed in curly braces, however in
+this case where there is a single parameter that is the default parameter the braces can be omitted.
+
+The final examples shows the use of the regex predicate. This takes 3 parameters, the pattern to match, the value to
+match against and full-match, which determines if the pattern must match the whole value or simply part of it.
+
+Some predicates may also capture additional information about the match and store it in the predicate context. For
+example the regex predicate will store the match under the key '0', and any match groups under the key '1', '2' etc.
+
+These contextual values can then be retrieved by later predicates of handlers using the syntax `${0}`, `${1}` etc.
+
+Predicates can be combined using the boolean operators 'and', 'or' and not. Some examples are shown below:
+
+
+[source]
+----
+not method[POST]
+method[POST] and path-prefix["/uploads"]
+path-template[value="/user/{username}/*"] and equals[%u, ${username}]
+regex[pattern="/user/(.*?)./.*", value=%U, full-match=true] and equals[%u, ${1}]
+----
+
+The first predicate will match everything except post requests. The second will match all post requests to /uploads.
+The third predicate will match all requests to URL's of the form /user/{username}/* where the username is equal to the
+username of the currently logged in user. In this case the username part of the URL is captured, and the equals handler
+can retrieve it using the `${username}` syntax shown above. The fourth example is the same as the third, however it uses
+a regex with a match group rather than a path template.
+
+The complete list of built in predicates is shown below:
+
+
+[frame="topbot",options="header"]
+|==========================
+|Name           | Parameters                | Parameter Types           | Default Parameter | Optional Parameters       | Additional context
+|contains       | value, search             | attribute, String[]       |                   |                           |
+|equals         | value                     | attribute[]               | value             |                           |
+|exists         | value                     | attribute                 | value             |                           |
+|method         | value                     | String[]                  | value             |                           |
+|path           | path                      | String[]                  | path              |                           |
+|path-prefix    | path                      | String[]                  | path              |                           |
+|path-suffix    | path                      | String[]                  | path              |                           |
+|path-template  | value,match               | String, attribute         | value             | match=%R                  | Path template elements under the name
+|regex          | pattern, value, full-match| String, attribute, boolean| pattern           | value=%R,full-match=false | Match groups under number
+|==========================
+
+// end::main[]
