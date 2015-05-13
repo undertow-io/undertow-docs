@@ -1,0 +1,82 @@
+// tag::main[]
+
+=== Getting Undertow
+
+There are a few ways to get Undertow.
+
+==== Wildfly
+
+Since version 8.0 Undertow has been the web server component of link:http://wildfly.org[Wildfly]. If you are using Wildfly
+then you already have Undertow.
+
+==== Maven
+
+Undertow is built using maven, and is synced to maven central. Undertow provides three seperate artifacts:
+
+Core:: Undertow core, which provides support for non blocking handlers and web sockets
+Servlet:: Support for Servlet 3.1
+Websockets JSR:: Support for the 'Java API for Websockets (JSR-356)' standard
+
+In order to use Undertow in your maven projects just include the following section in your pom.xml, and set the `undertow.version`
+property to whatever version of Undertow you wish to use. Only the core artifact is required, if you are not using
+Servlet or JSR-356 then those artifacts are not required.
+
+[source,xml]
+----
+<dependency>
+	<groupId>io.undertow</groupId>
+	<artifactId>undertow-core</artifactId>
+	<version>${undertow.version}</version>
+</dependency>
+<dependency>
+	<groupId>io.undertow</groupId>
+	<artifactId>undertow-servlet</artifactId>
+	<version>${undertow.version}</version>
+</dependency>
+<dependency>
+	<groupId>io.undertow</groupId>
+	<artifactId>undertow-websockets-jsr</artifactId>
+	<version>${undertow.version}</version>
+</dependency>
+----
+
+
+==== Direct Download
+
+Undertow can also be directly downloaded from the link:http://mvnrepository.com/search?q=io.undertow[maven repository].
+
+Undertow depends on link:http://xnio.jboss.org[XNIO] and link:https://github.com/jboss-logging/jboss-logging[JBoss Logging],
+which will need to be downloaded as well.
+
+==== Build it yourself
+
+In order to get the most up to date code you can build Undertow yourself.
+
+*Prerequisites*
+
+- JDK7 or higher
+- Maven 3.1
+- git
+
+Building Undertow is easy, just follow these steps:
+
+Configure Maven::
+Follow the instructions link:https://developer.jboss.org/wiki/MavenGettingStarted-Users[here] to configure Maven to use
+the JBoss Maven repository.
+
+Clone the git repo::
+`git clone https://github.com/undertow-io/undertow.git`
+
+Build Undertow::
+`cd undertow && mvn install`
+
+The build should run all tests and complete without errors.
+
+[WARNING]
+If you attempt to build with `-Dmaven.test.skip=true` for your intitial build the build will fail, as the core test
+jar will not be built and the Servlet module has a test scoped dependency on this jar. Either use `-DskipTests`, or
+just let the tests run the first time.
+
+
+
+// end::main[]

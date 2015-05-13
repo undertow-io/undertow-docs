@@ -10,6 +10,7 @@ Stuart Douglas
 == Introduction
 
 include::introduction.asciidoc[tags=main]
+include::getting-undertow.asciidoc[tags=main]
 
 == Undertow Core
 
