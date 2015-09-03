@@ -73,10 +73,8 @@ Build Undertow::
 The build should run all tests and complete without errors.
 
 [WARNING]
-If you attempt to build with `-Dmaven.test.skip=true` for your intitial build the build will fail, as the core test
+If you attempt to build with `-Dmaven.test.skip=true` for your initial build the build will fail, as the core test
 jar will not be built and the Servlet module has a test scoped dependency on this jar. Either use `-DskipTests`, or
 just let the tests run the first time.
-
-
 
 // end::main[]
