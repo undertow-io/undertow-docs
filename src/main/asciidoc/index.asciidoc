@@ -35,6 +35,10 @@ include::servlet-security.asciidoc[tags=main]
 include::servlet-advanced.asciidoc[tags=main]
 include::servlet-jsp.asciidoc[tags=main]
 
+== Undertow.js
+
+include::undertow-js.asciidoc[tags=main]
+
 == FAQ
 
 include::faq.asciidoc[tags=main]

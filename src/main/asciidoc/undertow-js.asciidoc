@@ -1,0 +1,337 @@
+// tag::main[]
+
+=== Undertow.js
+
+Undertow.js is a standalone project that makes it easy to write server side Javascript with Undertow. It supports the
+following:
+
+- Java EE integration, including dependency injection
+- REST
+- Templates
+- Declarative security
+- Filters
+- Websockets
+- Hot reload
+- JDBC
+
+The functionality is intended to be used as part of a Servlet deployment. It is designed to make it easy to mix Javascript
+and Java EE backend functionality, allowing you to quickly create a front end in Javascript while still using Java EE for
+all the heavy lifting.
+
+An overview of the functionality can be found at link:http://wildfly.org/news/2015/08/10/Javascript-Support-In-Wildfly/ .
+Some simple examples can be found at link::https://github.com/stuartwdouglas/undertow.js-examples.
+
+
+==== Getting Started
+
+First you need to include the latest Undertow.js in your application. If you are using Wildfly 10 this is not necessary,
+as Wildfly 10 provides this functionality out of the box. If you are using maven you can include the following in your
+`pom.xml` :
+
+[source,xml]
+----
+<dependency>
+	<groupId>io.undertow.js</groupId>
+	<artifactId>undertow-js</artifactId>
+	<version>1.0.0.Alpha3</version>
+</dependency>
+----
+
+Otherwise you can download the jars from link:http://mvnrepository.com/artifact/io.undertow.js/undertow-js .
+
+Once you have Undertow.js you need to tell it where to find your javascript files.
+To do this we create a file `WEB-INF/undertow-scripts.conf`. In this file you list your server side JavaScript files,
+one per line. These files will be executed in the order specified.
+
+Note that even though the server JavaScript files are located in the web context, the JavaScript integration will
+not allow them to be served. If a user requests a server side JS file a 404 will be returned instead.
+
+We can now create a simple endpoint. Create a javascript file, add it to `undertow-scripts.conf` and add the following
+contents:
+
+[source,javascript]
+----
+$undertow
+    .onGet("/hello",
+        {headers: {"content-type": "text/plain"}},
+        [function ($exchange) {
+            return "Hello World";
+        }])
+----
+
+Accessing the `/hello` path inside your deployment should now return a 'Hello World' response. Note that this path is
+relative to the context root, so if your deployment is `example.war` and your server is running on port 8080 the handler
+will be installed at `http://localhost:8080/example/hello`.
+
+==== Basic concepts
+
+The $undertow global provides the main functionality of an Undertow.js application. When your scripts are executed they
+invoke methods on this object to register HTTP and Websocket handlers. Incoming requests for the application will be
+checked against these handlers, and if they match the relevant javascript will be run to handle the request. If there
+is no matches the request is forwarded to the Servlet container as normal.
+
+If a file is modified and hot deployment is enabled the Nashorn engine is discarded, a new engine is created and all scripts
+are executed again to re-set up the handlers.
+
+==== HTTP Endpoints
+
+To register a handler for a HTTP endpoint you can use one of the following methods
+
+- `onGet`
+- `onPost`
+- `onPut`
+- `onDelete`
+- `onRequest`
+
+`onRequest` takes the method name as a first parameter, otherwise its usage is the same as the others. These methods can
+accept a variable number of parameters.
+
+Note that all methods on `$undertow` are fluent, they return the same object so they can be chained together.
+
+There are a number of different forms that can be used to invoke these methods, they are all covered below.
+
+[source,javascript]
+----
+$undertow.onGet("/path", function($exchange) {...})
+$undertow.onRequest("GET", "/path", function($exchange) {...})
+
+$undertow.onGet("/path", [function($exchange) {...}])
+$undertow.onRequest("GET", "/path", [function($exchange) {...}])
+----
+
+This is the simplest usage, which consists of a path and a handler function to register under this path. Both the usages
+shown above are identical. Future examples will not show the `onRequest` version, as with the exception of the method name
+it is identical.
+
+
+[source,javascript]
+----
+$undertow.onGet("/path", ['cdi:myBean', function($exchange, myBean) {...}])
+----
+
+The example above shows the use of dependency injection. If a list is passed as the last argument instead of a function
+then it is assumed to be a dependency injection list. It should consist of dependency names, followed by the handler
+function as the last element in the list. When the handler is invoked these items will be resolved, and passed into the
+method as parameters. The process is covered in more detail later.
+
+
+[source,javascript]
+----
+$undertow.onGet("/path/{name}", function($exchange) {...})
+----
+
+This example shoes the use a of path template instead of a hard coded path. The path parameter `name` can be accessed
+using the syntax `$exchange.params('name')`.
+
+
+[source,javascript]
+----
+$undertow.onGet("/path", {headers={'Content-Type': 'text/plain'}}, function($exchange) {...})
+----
+
+This usage includes an extra parameter, the metadata map. The usage of this is covered in more detail in the relevant
+sections, however the allowed values in this map are as follows:
+
+template::
+A template that should be applied using the data that is returned from the handler function.
+
+template_type::
+The template engine that should be used to render the template.
+
+headers::
+A map of response headers to add to the response.
+
+predicate::
+An Undertow predicate string that determines if this handler should actually be executed.
+
+roles_allowed::
+A list of roles that are allowed to access this handler. This uses the security configuration of the servlet deployment.
+
+It is possible to set default values for all of these values using the `$undertow.setDefault()` method. For example to
+set a content type header for all handlers you would do `$undertow.setDefault('headers', {'Content-Type': application/json})`.
+These defaults only take effect if the corresponding metadata item is not set on the handler.
+
+Handler functions can return a value. How this value is interpreted depends on the handler and what is returned. If
+the `template` parameter is specified in the metadata map then this return value is used as the data object for the template.
+Otherwise if the return value is a string it is sent to the client as the entity body, otherwise the return value will
+be converted into JSON using JSON.stringify() and the resulting JSON sent to the client.
+
+
+==== The exchange object
+
+The first parameter of any handler is the exchange object. This object is a wrapper around the Undertow `HttpServerExchange`,
+that makes it easier to use if from within Javascript. If you want to access the actual underlying object for whatever
+reason you can do so with the `$underlying` property (this applies to all wrapper objects used by Undertow.js, if the
+wrapper does not meet your needs you can get the underlying java object and invoke it directly).
+
+The exchange object provides the following methods:
+
+[source,javascript]
+----
+$exchange.requestHeaders('User-Agent');             //gets the user agent request header
+$exchange.requestHeaders('User-Agent', 'foo 1.0');  //sets the user agent request header
+$exchange.requestHeaders();                         //get the request headers map
+
+$exchange.responseHeaders('Content-Length');        //gets the content-length response header
+$exchange.responseHeaders('Content-Length', '100'); //sets the content length response header
+$exchange.responseHeaders();                        //gets the response header map
+
+$exchange.send("data");                             //sends the given string as the response body, and ends the exchange when done
+$exchange.send(404, "not found");                   //sets the given response code, and sends the response body, ending the exchange when done
+
+$exchange.redirect("http://www.example.org/index.php"); //redirects to the given location
+
+$exchange.status();                                 //returns the current status code
+$exchange.status(404);                              //sets the current status code
+
+$exchange.endExchange();                            //ends the current exchange
+
+$exchange.param("name");                            //gets the first query or path parameter with the specified name
+
+$exchange.params("names");                          //gets a list of the query or path parameters with the specified name
+
+$exchange.session();                                //returns the servlet HTTPSession object
+$exchange.request();                                //returns the servlet request object
+$exchange.response();                               //returns the servlet response object
+
+
+----
+
+==== Injection
+
+As shown above Undertow.js supports injection into handler functions. To perform an injection pass the name of the injection
+in a list with the handler function, as shown below:
+
+[source,javascript]
+----
+$undertow.onGet("/path", ['$entity:json', function($exchange, entity) {...}])
+----
+
+The injection mechanism is pluggable, and in general injections follow the form `type:name`. The following injection types
+are supported out of the box:
+
+$entity::
+This allows you to inject the request body. It supports the types `string`, `json` and `form`. `$entity:string` will inject
+the entity as a string, `$entity:json` will parse the entity as JSON and deliver it as a JavaScript object, and `$entity:form`
+will inject form encoded (or multipart) data.
+
+jndi::
+This will inject whatever object is at the specified JNDI location. For example `jndi:java:jboss/datasources/ExampleDS` will
+inject the Wildfly default datasource (actually it will inject a javascript wrapper of the datasource, more on that later).
+
+cdi::
+This will inject a `@Named` CDI bean with the given name.
+
+It is possible to create aliases for commonly used injections. You can do this by calling the `$undertow.alias()` function,
+for example:
+
+[source,javascript]
+----
+$undertow.alias("ds", "jndi:java:jboss/datasources/ExampleDS");
+----
+
+Note that alises can not have a type specifier.
+
+Note that this injection support is pluggable, and can be extended by implementing `io.undertow.js.InjectionProvider`,
+and adding the implementing class to `META-INF/services/io.undertow.js.InjectionProvider`.
+
+==== Wrapper Objects and JDBC
+
+When injecting JDBC data sources Undertow does not inject the actual datasource, but a JavaScript wrapper object.
+To get the underlying data source you can refer to the wrappers `$underlying` property.
+
+The wrapper object has the following methods:
+
+
+[source,javascript]
+----
+ds.query("UPDATE ...");             //executes a query, and returns the number of rows affected
+ds.select("SELECT * from ...");     //executes a select query, and returns an array of maps as the result
+ds.selectOne("SELECT * from ...");  //executes a select query, and a single map as the result
+----
+
+Note that this wrapper mechanism is pluggable, and can be extended by adding a function to the $undertow.injection_wrappers
+array. This function takes the original object and returns the wrapped result.
+
+==== Wrappers (Filters)
+
+It is possible to register 'wrappers', which act similarly to a Servlet Filter. These can intercept requests before they
+reach a handler, allowing you to apply cross cutting logic such as transactions or logging. Note that these wrappers only
+apply to javascript handlers, if a request is not targeted at a handler they will not be invoked.
+
+To register a wrapper you call the `$undertow.wrapper()` function as follows:
+
+[source,javascript]
+----
+$undertow.wrapper("path-suffix['.html']", ["cdi:myBean",function($exchange, $next, myBean) {
+        //do stuff
+        $next();
+    }])
+----
+
+The first optional parameter is an Undertow predicate string, that controls when the wrapper will be invoked (in this
+case for all .html files). The next argument is an injection list. This works in a similar way to handlers, however
+this function takes two parameters in addition to any injected one. The $next parameter is a function that should be
+invoked to invoke the next wrapper or handler in the chain.
+
+==== Templates
+
+It is possible to use template engines to do server side rendering. This mechanism is pluggable, out of the box the 'mustache'
+and 'freemarker' template engines are supported, with 'mustache' being the default. This is controlled by the 'template_type'
+entry in the metadata map, and the default can be changed by calling `$undertow.setDefault('template_type', 'freemarker');`.
+
+To use a template all that is requires is to specify the template name in the metadata map when registering a handler, and
+then return the data object that you wish to use to render the template:
+
+[source,javascript]
+----
+$undertow.onGet("/template", {template: test.html}, function($exchange) {
+    return {message: "Hello World"};
+}
+----
+
+After the handler function has been installed, the template is rendered with the provided data and sent to the client.
+
+The template mechanism is pluggable, new engines can be added by implementing `io.undertow.js.templates.TemplateProvider`
+and adding the implementation class to `META-INF/services/io.undertow.js.templates.TemplateProvider`.
+
+==== Security
+
+==== WebSockets
+
+To register a WebSocket endpoint you can invoke the `$undertow.websocket()` method as follows:
+
+[source,javascript]
+----
+$undertow.websocket("/path", function(connection) { });
+----
+
+This connection object is a wrapper around an Undertow `WebSocketConnection`. It supports the following methods and properties:
+
+[source,javascript]
+----
+con.send(data);                     //sends a websocket message
+con.onText = function(data){};      //set the onText handler function
+con.onBinary = function(data){};    //sets the onBinary handler function
+con.onClose = function(message){};  //sets the close message handler function
+con.onError = function(error){};    //sets the error handing function
+---
+
+The behaviour of the `send()` function varies depending on the argument. If a string is passed in the string is sent as a
+text message. If an ArrayBuffer is passed in the data will be sent as a binary message. Otherwise the object will be converted
+into JSON and the result sent to the client as a text message.
+
+The `onText` callback will deliver its message as a string, and the `onBinary` method will deliver it as a Javascript `ArrayBuffer`.
+If these callbacks return a value it will be sent to the client using `send()` (so the same conversion rules apply).
+
+NOTE: It is currently not possible to inject into Websocket Endpoint methods. This will be fixed shortly.
+
+==== Some notes on thread safety
+
+Note that you should never store global or shared state in Javascript objects, as Nashhorn does not support this sort of
+multi threaded access. If you need to share data between threads you should use a properly synchronised Java object (such
+as an EJB singleton) and inject this object into your handler.
+
+
+
+// end::main[]
