@@ -315,7 +315,7 @@ con.onText = function(data){};      //set the onText handler function
 con.onBinary = function(data){};    //sets the onBinary handler function
 con.onClose = function(message){};  //sets the close message handler function
 con.onError = function(error){};    //sets the error handing function
----
+----
 
 The behaviour of the `send()` function varies depending on the argument. If a string is passed in the string is sent as a
 text message. If an ArrayBuffer is passed in the data will be sent as a binary message. Otherwise the object will be converted
