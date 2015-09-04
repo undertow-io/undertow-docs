@@ -297,6 +297,18 @@ and adding the implementation class to `META-INF/services/io.undertow.js.templat
 
 ==== Security
 
+It is possible to use declarative security by specifying the allowed roles in the metadata map as an array under `roles_allowed`.
+The security settings of the Servlet application are used to authenticate the user and perform the check
+
+The special role `**` refers to any authenticated user.
+
+An example is shown below:
+
+[source,javascript]
+----
+$undertow.onGet("/path", {roles_allowed: ['admin', 'user']}, function($exchange) { });
+----
+
 ==== WebSockets
 
 To register a WebSocket endpoint you can invoke the `$undertow.websocket()` method as follows:
