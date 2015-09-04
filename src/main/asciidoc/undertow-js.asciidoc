@@ -18,8 +18,8 @@ The functionality is intended to be used as part of a Servlet deployment. It is 
 and Java EE backend functionality, allowing you to quickly create a front end in Javascript while still using Java EE for
 all the heavy lifting.
 
-An overview of the functionality can be found at link:http://wildfly.org/news/2015/08/10/Javascript-Support-In-Wildfly/ .
-Some simple examples can be found at link::https://github.com/stuartwdouglas/undertow.js-examples.
+An overview of the functionality can be found at link:http://wildfly.org/news/2015/08/10/Javascript-Support-In-Wildfly/[].
+Some simple examples can be found at link:https://github.com/stuartwdouglas/undertow.js-examples[].
 
 
 ==== Getting Started
