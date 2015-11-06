@@ -177,7 +177,7 @@ access log.
 Some handlers may actually modify these attributes. In order for this to work the attribute must not be read only, and
 must consist of only a single token from the above table.
 
-==== Textual Representation Predicates
+==== Textual Representation of Predicates
 
 Sometimes it is also useful to have a textual representation of a predicate. For examples when configuring a handler
 in Wildfly we may want it only to run if a certain condition is met, and when doing rewrite handling we generally do
@@ -238,16 +238,95 @@ The complete list of built in predicates is shown below:
 
 [frame="topbot",options="header"]
 |==========================
-|Name           | Parameters                | Parameter Types           | Default Parameter | Optional Parameters       | Additional context
-|contains       | value, search             | attribute, String[]       |                   |                           |
-|equals         | value                     | attribute[]               | value             |                           |
-|exists         | value                     | attribute                 | value             |                           |
-|method         | value                     | String[]                  | value             |                           |
-|path           | path                      | String[]                  | path              |                           |
-|path-prefix    | path                      | String[]                  | path              |                           |
-|path-suffix    | path                      | String[]                  | path              |                           |
-|path-template  | value,match               | String, attribute         | value             | match=%R                  | Path template elements under the name
-|regex          | pattern, value, full-match| String, attribute, boolean| pattern           | value=%R,full-match=false | Match groups under number
+|Name           | Parameters  | Default Parameter | Additional context
+|auth-required	|	|	|
+|contains	|search: String[] (required), value: attribute (required)	|	|
+|directory	|value: attribute	|value	|
+|dispatcher	|value: String (required)	|value	|
+|equals	|value: attribute[] (required)	|value	|
+|exists	|value: attribute (required)	|value	|
+|file	|value: attribute	|value	|
+|max-content-size	|value: Long (required)	|value	|
+|method	|value: String[] (required)	|value	|
+|min-content-size	|value: Long (required)	|value	|
+|path	|path: String[] (required)	|path	|
+|path-prefix	|path: String[] (required)	|path	| Unmatched under ${remaining}
+|path-suffix	|path: String[] (required)	|path	|
+|path-template	|match: attribute, value: String (required)	|value	| Path template elements under the name
+|regex	|case-sensitive: Boolean, full-match: Boolean, pattern: String (required), value: attribute	|pattern	| Match groups under number
+|secure	|	|	|
 |==========================
+
+==== Textual Representation of Handlers
+
+Handlers are represented in a similar way to predicates. Handlers are predicates are combined into the Undertow predicate
+language.
+
+The general form of this language is `predicate -> handler`. If the predicate evaluates to true the handler is executes.
+If there is only a handler present then the handler is always executed. Handlers are executed in order and separated
+by line breaks or semi colons. Curly braces can be used to create a sub grouping, with all handlers (and possibly predicates)
+in the sub grouping being executed. The 'else' keyword can be used to execute a different handler or sub grouping if the
+predicate evaluates to false. Sub grouping can contain other predicates and sub groupings.
+
+The 'restart' handler is a special handler that will restart execution at the beginning of the predicated handler list.
+The 'done' handler will skip any remaining rules.
+
+Some examples are below:
+
+
+[source]
+----
+path(/skipallrules) and true -> done
+method(GET) -> set(attribute='%{o,type}', value=get)
+regex('(.*).css') -> { rewrite['${1}.xcss']; set(attribute='%{o,chained}', value=true) }
+regex('(.*).redirect$') -> redirect['${1}.redirected']
+set[attribute='%{o,someHeader}', value=always]
+path-template('/foo/{bar}/{f}') -> set[attribute='%{o,template}', value='${bar}']
+path-template('/bar->foo') -> {
+    redirect(/);
+} else {
+    path[/some-other-path] -> header[header=my-header,value=my-value]
+}
+regex('(.*).css') -> set[attribute='%{o,css}', value='true'] else set[attribute='%{o,css}', value='false'];
+path(/restart) -> {
+    rewrite(/foo/a/b);
+    restart;
+}
+----
+
+
+[frame="topbot",options="header"]
+|==========================
+|Name           | Parameters  | Default Parameter | Additional context
+|access-log	|format: String (required)	|format	|
+|allowed-methods	|methods: String[] (required)	|methods	|
+|blocking	|	|	|
+|byte-range	|send-accept-ranges: boolean	|send-accept-ranges	|
+|canonical-path	|	|	|
+|compress	|	|	|
+|disable-cache	|	|	|
+|disallowed-methods	|methods: String[] (required)	|methods	|
+|done	|	|	|
+|dump-request	|	|	|
+|error-file	|file: String (required), response-codes: class [Ljava.lang.Integer; (required)	|	|
+|header	|header: String (required), value: attribute (required)	|	|
+|ip-access-control	|acl: String[] (required), default-allow: boolean, failure-status: int	|acl	|
+|jvm-route	|session-cookie-name: String, value: String (required)	|value	|
+|learning-push	|max-age: class java.lang.Integer, max-entries: class java.lang.Integer	|	|
+|path-separator	|	|	|
+|proxy-peer-address	|	|	|
+|redirect	|value: attribute (required)	|value	|
+|request-limit	|requests: int (required)	|requests	|
+|resolve-peer-name	|	|	|
+|resource	|allow-listing: boolean, location: String (required)	|location	|
+|response-code	|value: class java.lang.Integer (required)	|value	|
+|response-rate-limit	|bytes: class java.lang.Integer (required), time: Long (required)	|	|
+|restart	|	|	|
+|reverse-proxy	|hosts: String[] (required), rewrite-host-header: Boolean	|hosts	|
+|rewrite	|value: attribute (required)	|value	|
+|set	|attribute: attribute (required), value: attribute (required)	|	|
+|ssl-headers	|	|	|
+|trace	|	|	|
+|url-decoding	|charset: String (required)	|charset	|
 
 // end::main[]
