@@ -135,7 +135,7 @@ form %{attribute}, while the short version is a percent sign followed by a singl
 attributes provided by Undertow is below:
 
 [frame="topbot",options="header"]
-|==========================
+|===
 |Attribute                                                                    |Short Form|Long Form
 |Remote IP address                                                            | `%a`     | `%{REMOTE_IP}`
 |Local IP address                                                             | `%A`     | `%{LOCAL_IP}`
@@ -165,7 +165,7 @@ attributes provided by Undertow is below:
 |Request header                                                               |          | `%{i,request_header_name}`
 |Response header                                                              |          | `%{o,response_header_name}`
 |Value from the predicate context                                             |          | `${name}`
-|==========================
+|===
 
 Any tokens that do not follow one of the above patterns are assumed to be literals. For example assuming a
 user name of 'Stuart' and a request method of 'GET' the attribute text `Hello %u the request method is %m` will give
@@ -237,7 +237,7 @@ The complete list of built in predicates is shown below:
 
 
 [frame="topbot",options="header"]
-|==========================
+|===
 |Name           | Parameters  | Default Parameter | Additional context
 |auth-required	|	|	|
 |contains	|search: String[] (required), value: attribute (required)	|	|
@@ -255,7 +255,7 @@ The complete list of built in predicates is shown below:
 |path-template	|match: attribute, value: String (required)	|value	| Path template elements under the name
 |regex	|case-sensitive: Boolean, full-match: Boolean, pattern: String (required), value: attribute	|pattern	| Match groups under number
 |secure	|	|	|
-|==========================
+|===
 
 ==== Textual Representation of Handlers
 
@@ -296,7 +296,7 @@ path(/restart) -> {
 
 
 [frame="topbot",options="header"]
-|==========================
+|===
 |Name           | Parameters  | Default Parameter | Additional context
 |access-log	|format: String (required)	|format	|
 |allowed-methods	|methods: String[] (required)	|methods	|
@@ -328,5 +328,6 @@ path(/restart) -> {
 |ssl-headers	|	|	|
 |trace	|	|	|
 |url-decoding	|charset: String (required)	|charset	|
+|===
 
 // end::main[]
