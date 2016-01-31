@@ -32,7 +32,7 @@ The built it list of mechanisms and the properties they take are as follows:
 [frame="topbot",options="header"]
 |===
 |Mechanism Name | Options               | Notes         |
-|BASIC          | silent (true/false)   | Silent mode means that a challenge will only be issued if an +Authorization+ header with invalid credentials is present. If this header is not present this auth method will never be used. |
+|BASIC          | silent (true/false), charset, user-agent-charsets   | `silent` mode means that a challenge will only be issued if an +Authorization+ header with invalid credentials is present. If this header is not present this auth method will never be used. `charset` specifies the default charset to use for decoding usernames and passwords. `user-agent-charsets` is a comma seperated list of the form `pattern,charset,pattern,charset,...` that allows you to change the charset used for decoding based on the browser user agent string. If the regex matches the requests user agent then the specified charset will be used instead. |
 |FORM           |                       |               |
 |CLIENT-CERT    |                       |               |
 |DIGEST         |                       |               |
