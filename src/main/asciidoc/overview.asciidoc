@@ -2,8 +2,6 @@
 
 === Architecture Overview
 
-This provides a general overview of Undertow's architecture. It is not intended to be a comprehensive guide.
-
 On thing that makes Undertow unique is that it has no concept of a global 'container'. Instead an Undertow
 server is assembled by the embedding application. This makes Undertow extremely flexible, and the embedding
 application can basically just pick the parts that they need, and assemble them in whatever way makes sense.
@@ -15,12 +13,6 @@ and a handler chain to handle incoming requests.
 
 Undertow is based on XNIO. The XNIO project provides a thin abstraction layer over Java NIO. In particular it provides
 the following:
-
-==== Channel API
-
-XNIO provides a channel abstraction, that abstracts away the underlying transport. Channels are notified of events
-using the `ChannelListener` API, and do not have to deal with NIO interest OPs directly. At creation time channels are
-assigned an IO Thread. This is the thread that will be used to execute all ChannelListener invocations for the channel.
 
 ==== Management of IO and Worker threads
 
@@ -34,28 +26,25 @@ IO threads run in a loop. This loop does three things:
  - Run any scheduled tasks that that have hit their timeout
  - Call Selector.select(), and then invoke any callbacks for selected keys
 
-==== SSL Support
+==== Channel API
 
-XNIO also provides support for SSL, that provides the basis for Undertows SSL implementation.
-
+XNIO provides a channel abstraction, that abstracts away the underlying transport. Channels are notified of events
+using the `ChannelListener` API, and do not have to deal with NIO interest OPs directly. At creation time channels are
+assigned an IO Thread. This is the thread that will be used to execute all ChannelListener invocations for the channel.
 
 ==== Listeners
 
 The concept of a listener in Undertow is basically the part of Undertow that handles incoming connections, and the
-underlying wire protocol. By default Undertow ships with 3 different listeners:
+underlying wire protocol. By default Undertow ships with 5 different listeners:
 
-- HTTP
+- HTTP/1.1
 - HTTPS
 - AJP
+- SPDY (deprecated)
+- HTTP/2
 
-Support for SPDY is planned, and should be coming soon.
-
-These connectors basically take the form of two XNIO listeners, an open listener and a read listener. The open listener
-is invoked when a connection is first received. This listener will do any work required to setup the connection, and
-then pass this off to the read listener. The read listener is responsible for parsing the incoming request into a
-HttpServerExchange object, setting up any protocol specific state that is required, and delegating to the first handler
-in the handler chain. When the request is done the read listener is invoked again (assuming persistent connections are
-in use), and the process is repeated.
+These listeners will generally do all IO in an IO thread using async IO. When a request has been fully parsed they will
+create a `HttpServerExchange` object populated with the request data and then hand this to the handler chain.
 
 Connectors are tied to an XNIO worker. If multiple connectors are setup to invoke the same handler chain they may share
 a Worker, or they may have separate workers, depending on how they have been configured.

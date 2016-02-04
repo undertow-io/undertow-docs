@@ -6,10 +6,16 @@ Listeners represent the entry point of an Undertow application. All incoming req
 a listener is responsible for translating a request into an instance of the `HttpServerExchange` object, and then
 turning the result into a response that can be sent back to the client.
 
-Undertow provides 4 built in listener types, HTTP, AJP, SPDY and HTTP2. HTTPS is provides by using the HTTP listener
+Undertow provides 4 built in listener types, HTTP/1.1, AJP, SPDY and HTTP/2. HTTPS is provided by using the HTTP listener
 with an SSL enabled connection.
 
-Note that it is expected that now that HTTP2 is out it is expected that SPDY will be deprecated and eventually removed.
+Note that it is expected that now that HTTP/2 is out it is expected that SPDY will be deprecated and eventually removed.
+
+==== Options
+
+Undertow listeners can be configured through the use of the `org.xnio.Option` class. In general options for XNIO that
+control connection and worker level behaviour are are listed in `org.xnio.Options`. Undertow specific options that control
+connector level behaviour are listed in `io.undertow.UndertowOptions`.
 
 ==== XNIO workers
 
@@ -19,17 +25,17 @@ between listeners, however it is possible to create a new worker for each listen
 The worker instance manages the listeners IO threads, and also the default blocking task thread pool. There are several
 main XNIO worker options that affect listener behaviour. These option can either be specified on the Undertow builder
 as worker options, or at worker creating time if you are bootstrapping a server manually. These options all reside on
-the org.xnio.Options class.
+the `org.xnio.Options` class.
 
 WORKER_IO_THREADS::
 The number of IO threads to create. IO threads perform non blocking tasks, and should never perform blocking operations
 because they are responsible for multiple connections, so while the operation is blocking other connections will
-essentially hang. One IO thread per CPU core is a reasonable default.
+essentially hang. Two IO threads per CPU core is a reasonable default.
 
 WORKER_TASK_CORE_THREADS::
 The number of threads in the workers blocking task thread pool. When performing blocking operations such as Servlet
 requests threads from this pool will be used. In general it is hard to give a reasonable default for this, as it depends
-on the server workload. Generally this should be reasonably high, at least 10 per CPU core.
+on the server workload. Generally this should be reasonably high, around 10 per CPU core.
 
 ==== Buffer Pool
 
@@ -61,6 +67,11 @@ be thrown at some point when reading the request (on the first read for fixed le
 been read for chunked requests). This value is only the default size, it is possible for a handler to override this for
 an individual request by calling `io.undertow.server.HttpServerExchange.setMaxEntitySize(long size)`. Defaults 
 to unlimited.
+
+MULTIPART_MAX_ENTITY_SIZE::
+
+The default max entity size when using the Multipart parser. This will generally be larger than `MAX_ENTITY_SIZE`. Having
+a seperate setting for this allows for large files to be uploaded, while limiting the size of other requests.
 
 MAX_PARAMETERS::
 
@@ -164,8 +175,8 @@ The HTTP listener is the most commonly used listener type, and deals with HTTP/1
 
 ENABLE_HTTP2::
 
-If this is true then the connection can be processed as a HTTP2 'prior knowledge' connection. If a HTTP2 connects directly
-to the listener with a HTTP2 connection preface then the HTTP2 protocol will be used instead of HTTP/1.1.
+If this is true then the connection can be processed as a HTTP/2 'prior knowledge' connection. If a HTTP/2 client connects directly
+to the listener with a HTTP/2 connection preface then the HTTP/2 protocol will be used instead of HTTP/1.1.
 
 ==== AJP Listener
 
@@ -175,8 +186,59 @@ The AJP listener allows the use of the AJP protocol, as used by the apache modul
 protocol that is slightly more efficient protocol than HTTP, as some common strings are replaced by integers. If the front
 end load balancer supports it then it is recommended to use HTTP2 instead, as it is both a standard protocol and more efficient.
 
+This listener has one specific option:
+
+MAX_AJP_PACKET_SIZE::
+
+Controls the maximum size of an AJP packet. This setting must match on both the load balancer and backend server.
+
 ==== HTTP2 Listener
 
+HTTP/2 support is implemented on top of HTTP/1.1 (it is not possible to have a HTTP/2 server that does not also support
+HTTP/1). There are three different ways a HTTP/2 connection can be established:
+
+ALPN::
+This is the most common way (and the only way many browsers currently support). It requires HTTPS, and uses the application
+layer protocol negotiation SSL extension to negotiate that connection will use HTTP/2.
+
+Prior Knowledge::
+This involves the client simply sending a HTTP/2 connection preface and assuming the server will support it. This is not
+generally used on the open internet, but it useful for things like load balancers when you know the backend server will
+support HTTP/2.
+
+HTTP Upgrade::
+This involves the client sending an `Upgrade: h2c` header in the initial request. If this upgrade is accepted then the server
+will initiate a HTTP/2 connection, and send back the response to the initial request using HTTP/2.
+
+Depending on the way HTTP/2 is being used the setup for the listeners is slightly different.
+
+If you are using the Undertow builder all that is required is to call `setServerOption(ENABLE_HTTP2, true)`, and HTTP/2
+support will be automatically added for all HTTP and HTTPS listeners.
+
+[WARNING]
+JDK8 does not currently support ALPN. To use HTTP/2 over HTTPS it is necessary to use the Jetty ALPN extension on the
+boot class path. Instructions for Jetty ALPN can be found at http://www.eclipse.org/jetty/documentation/9.2.8.v20150217/alpn-chapter.html
+
+The following options are supported:
+
+HTTP2_SETTINGS_HEADER_TABLE_SIZE::
+The size of the header table that is used for compression. Increasing this will use more memory per connection, but potentially
+decrease the amount of data that is sent over the wire. Defaults to 4096.
+
+HTTP2_SETTINGS_ENABLE_PUSH::
+If server push is enabled for this connection.
+
+HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS::
+The maximum number of streams a client is allowed to have open at any one time.
+
+HTTP2_SETTINGS_INITIAL_WINDOW_SIZE::
+The initial flow control window size.
+
+HTTP2_SETTINGS_MAX_FRAME_SIZE::
+The maximum frame size.
+
+HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE::
+The maximum size of the headers that this server is prepared to accept.
 
 
 ==== SPDY Listener

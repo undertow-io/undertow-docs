@@ -47,17 +47,12 @@ The builder will try and pick sensible defaults for all performance related para
 buffer sizes, however all these can be overridden directly using the builder. These options and their effects are
 detailed in the link:listeners.html[listeners guide], and will not be repeated here.
 
-Note that because of the flexibility of Undertow there are likely several general purpose handlers that you will always
-want to include in your server (e.g. the date handler, that adds a date header to all responses). For more information
-see the link:undertow-handler-guide.html[handlers guide].
-
 ==== Assembling a Server Manually
-
 
 If you do not want to use the builder API then there are a few steps that you need to follow to create a server:
 
-. Create an XNIO Worker
-. Create an XNIO SSL instance (optional)
+. Create an XNIO Worker. This worker manages both the IO and Worker threads for the server.
+. Create an XNIO SSL instance (optional, only required if HTTPS is in use)
 . Create an instance of the relevant Undertow listener class
 . Open a server socket using XNIO and set its accept listener
 
