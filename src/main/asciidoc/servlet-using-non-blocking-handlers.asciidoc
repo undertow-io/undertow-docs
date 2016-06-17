@@ -2,7 +2,7 @@
 
 === Using non-blocking handlers with servlet
 
-When using servlet deployments in Undertow is is possible to mix and match servlets and Undertow native handlers.
+When using servlet deployments in Undertow it is possible to mix and match servlets and Undertow native handlers.
 
 This is achieved via the `io.undertow.servlet.ServletExtension` interface. This interface allows you to customise
 a servlet deployment before it is deployed, including wrapping the servlet handler chain with your own handlers.
