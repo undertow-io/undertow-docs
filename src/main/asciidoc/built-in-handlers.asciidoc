@@ -24,12 +24,6 @@ Similar to the path handler, however the path template handler allows you to use
 for example /rest/{name}. The value of the relevant path template items are stored as an attachment on the exchange,
 under the `io.undertow.server.handlers.PathTemplateHandler#PATH_TEMPLATE_MATCH` attachment key.
 
-
-Date::
-
-This handler sets the `Date:` header as required by the HTTP RFC. In order to avoid formatting a new date each time
-dates are accurate to the nearest second.
-
 Resource::
 
 The resource handler is used to serve static resources such as files. This handler takes a `ResourceManager` instance,

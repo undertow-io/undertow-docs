@@ -240,7 +240,6 @@ The maximum frame size.
 HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE::
 The maximum size of the headers that this server is prepared to accept.
 
-
 ==== SPDY Listener
 
 `io.undertow.server.protocol.spdy.SpdyOpenListener`
