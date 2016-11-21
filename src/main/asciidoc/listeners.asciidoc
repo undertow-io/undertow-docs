@@ -9,12 +9,12 @@ turning the result into a response that can be sent back to the client.
 Undertow provides 4 built in listener types, HTTP/1.1, AJP, SPDY and HTTP/2. HTTPS is provided by using the HTTP listener
 with an SSL enabled connection.
 
-Note that it is expected that now that HTTP/2 is out it is expected that SPDY will be deprecated and eventually removed.
+Note now that HTTP/2 is out it is expected that SPDY will be deprecated and eventually removed.
 
 ==== Options
 
 Undertow listeners can be configured through the use of the `org.xnio.Option` class. In general options for XNIO that
-control connection and worker level behaviour are are listed in `org.xnio.Options`. Undertow specific options that control
+control connection and worker level behaviour are listed in `org.xnio.Options`. Undertow specific options that control
 connector level behaviour are listed in `io.undertow.UndertowOptions`.
 
 ==== XNIO workers
