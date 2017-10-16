@@ -15,7 +15,7 @@ and response state.
 At this point the request and response channel wrappers are setup, that are responsible for decoding and encoding
 the request and response data.
 
-The root handler is then executed via `io.undertow.server.HttpHandlers#executeRootHandler`. Handlers are chained
+The root handler is then executed via `io.undertow.server.Connectors#executeRootHandler`. Handlers are chained
 together, and each handler can modify the exchange, send a response, or delegate to a different handler. At this point
 there are a few different things that can happen:
 
