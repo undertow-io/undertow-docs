@@ -294,40 +294,554 @@ path(/restart) -> {
 }
 ----
 
+== Built in Handlers
 
-[frame="topbot",options="header"]
+=== Access Log Handler
+
 |===
-|Name           | Parameters  | Default Parameter | Additional context
-|access-log	|format: String (required)	|format	|
-|allowed-methods	|methods: String[] (required)	|methods	|
-|blocking	|	|	|
-|byte-range	|send-accept-ranges: boolean	|send-accept-ranges	|
-|canonical-path	|	|	|
-|compress	|	|	|
-|disable-cache	|	|	|
-|disallowed-methods	|methods: String[] (required)	|methods	|
-|done	|	|	|
-|dump-request	|	|	|
-|error-file	|file: String (required), response-codes: class [Ljava.lang.Integer; (required)	|	|
-|header	|header: String (required), value: attribute (required)	|	|
-|ip-access-control	|acl: String[] (required), default-allow: boolean, failure-status: int	|acl	|
-|jvm-route	|session-cookie-name: String, value: String (required)	|value	|
-|learning-push	|max-age: class java.lang.Integer, max-entries: class java.lang.Integer	|	|
-|path-separator	|	|	|
-|proxy-peer-address	|	|	|
-|redirect	|value: attribute (required)	|value	|
-|request-limit	|requests: int (required)	|requests	|
-|resolve-peer-name	|	|	|
-|resource	|allow-listing: boolean, location: String (required)	|location	|
-|response-code	|value: class java.lang.Integer (required)	|value	|
-|response-rate-limit	|bytes: class java.lang.Integer (required), time: Long (required)	|	|
-|restart	|	|	|
-|reverse-proxy	|hosts: String[] (required), rewrite-host-header: Boolean	|hosts	|
-|rewrite	|value: attribute (required)	|value	|
-|set	|attribute: attribute (required), value: attribute (required)	|	|
-|ssl-headers	|	|	|
-|trace	|	|	|
-|url-decoding	|charset: String (required)	|charset	|
+| Name: | access-log
+| Class: |  io.undertow.server.handlers.accesslog.AccessLogHandler
+| Parameters: | format: String (required)
+| Default Parameter | format
 |===
+
+A handler that will log access attempts to JBoss Logging. The output can be configured via
+the format parameter which takes exchange attributes.
+
+=== Access Control Handler
+
+|===
+| Name: | access-control
+| Class: |  io.undertow.server.handlers.AccessControlListHandler
+| Parameters: | acl: String[] (required), default-allow: boolean, attribute: ExchangeAttribute (required)
+| Default Parameter |
+|===
+
+This handler is used to specify access control lists. These lists consist of an array of strings, which
+follow the format `{pattern} allow|deny`, where {pattern} is a regular expression. These rules are applied
+against the specified exchange attribute until a match is found. If the result in `deny` then the request
+is rejected with a 403 response, otherwise the next handler is invoked.
+
+If no match is found the default behaviour is to deny.
+
+=== Allowed Methods
+
+|===
+| Name: | allowed-methods
+| Class: |  io.undertow.server.handlers.AllowedMethodsHandler
+| Parameters: | methods: String[] (required)
+| Default Parameter | methods
+|===
+
+This handler takes a list of allowed methods. If an incoming request's method is in the specific method
+list then the request is allowed, otherwise it is rejected with a 405 response (method not allowed).
+
+=== Blocking Handler
+
+|===
+| Name: | blocking
+| Class: |  io.undertow.server.handlers.BlockingHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+This handler will mark the request as blocking and dispatch it to the XNIO worker thread.
+
+=== Buffer Request Handler
+
+|===
+| Name: | buffer-request
+| Class: |  io.undertow.server.handlers.RequestBufferingHandler
+| Parameters: | buffers: int (required)
+| Default Parameter | buffers
+|===
+
+This handler will pause request processing while it attempts to read the request body. It uses Undertow
+buffers to store the request body, so the amount of data that can be buffered is determined by the
+buffer size multiplied by the `buffers` parameter.
+
+Once either all data is read or the configured maximum amount of data has been read then the next handler
+will be invoked.
+
+This can be very useful when use a blocking processing model, as the request will be read using non-blocking IO,
+and as the request will not be dispatched to the thread pool until the data has been read.
+
+=== Byte Range Handler
+
+|===
+| Name: | byte-range
+| Class: |  io.undertow.server.handlers.ByteRangeHandler
+| Parameters: | send-accept-ranges: boolean
+| Default Parameter | send-accept-ranges
+|===
+
+A handler that adds generic support for range requests. This handler will work with any request, however in
+general it is less efficient than supporting range requests directly, as the full response will be generated
+and then pieces that are not requested will be discarded. Nonetheless for dynamic content this is often
+the only way to fully support ranges.
+
+If the handler that generated the response already handled the range request then this handler will have
+no effect.
+
+By default the `Accept-Range` header will not be appended to responses, unless the `send-accept-ranges`
+parameter is true.
+
+=== Canonical Path Handler
+
+|===
+| Name: | canonical-path
+| Class: |  io.undertow.server.handlers.CanonicalPathHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+Handler that turns a path into a canonical path by resolving `../` and `./` segments. If these segments
+result in a path that would be outside the root then these segments are simply discarded.
+
+This can help prevent directory traversal attacks, as later handlers will only every see a path that
+is not attempting to escape the server root.
+
+=== Clear Handler
+
+|===
+| Name: | clear
+| Class: |  io.undertow.server.handlers.SetAttributeHandler
+| Parameters: | attribute: ExchangeAttribute (required)
+| Default Parameter | attribute
+|===
+
+A special form of the set-attribute handler that sets an attribute to null.
+
+=== Compress Handler
+
+|===
+| Name: | compress
+| Class: |  io.undertow.server.handlers.encoding.EncodingHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that adds support for deflate and gzip compression.
+
+=== Disable Cache Handler
+
+|===
+| Name: | disable-cache
+| Class: |  io.undertow.server.handlers.DisableCacheHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that will set headers to disable the browser cache. The headers that are set are:
+
+* `Cache-Control: no-cache, no-store, must-revalidate`
+* `Pragma: no-cache`
+* `Expires: 0`
+
+=== Disallowed Methods Handler
+
+|===
+| Name: | disallowed-methods
+| Class: |  io.undertow.server.handlers.DisallowedMethodsHandler
+| Parameters: | methods: String[] (required)
+| Default Parameter | methods
+|===
+
+This handler takes a list of disallowed methods. If an incoming request's method is in the specific method
+list then the request is rejected with a 405 response (method not allowed), otherwise it is allowed.
+
+=== Done Handler
+
+|===
+| Name: | done
+| Class: |  N/A
+| Parameters: |
+| Default Parameter |
+|===
+
+This is a pseudo handler that will finish execution of the current predicated handlers, and invoke
+whatever handler is configured after the current predicated handlers block.
+
+=== Request Dumping Handler
+
+|===
+| Name: | dump-request
+| Class: | io.undertow.server.handlers.RequestDumpingHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that will dump all relevant details from a request to the log. As this is quite expensive a
+predicate should generally be used to control which requests are dumped.
+
+=== Error File Handler
+
+|===
+| Name: | error-file
+| Class: | io.undertow.server.handlers.error.FileErrorPageHandler
+| Parameters: | file: String (required), response-codes: int[] (required)
+| Default Parameter |
+|===
+
+A handler that will respond with a file based error page if the request has finished with one of the
+specified error codes and no response body has been generated.
+
+=== Forwarded Handler
+
+|===
+| Name: | forwarded
+| Class: | io.undertow.server.handlers.ForwardedHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+This handler implements rfc7239 and handles the `Forwarded` header. It does this by updating the
+exchange so its peer and local addresses reflect the values in the header.
+
+This should only be installed behind a reverse proxy that has been configured to send the `Forwarded`
+header, otherwise a remote user can spoof their address by sending a header with bogus values.
+
+In general either this handler or `proxy-peer-address` handler should be used, they should not both
+be installed at once.
+
+
+=== Header Handler
+
+|===
+| Name: | header
+| Class: | io.undertow.server.handlers.SetHeaderHandler
+| Parameters: | header: String (required), value: ExchangeAttribute (required)
+| Default Parameter |
+|===
+
+The handler sets a response header with the given name and value.
+
+=== Http Continue Accepting Handler
+
+|===
+| Name: | http-continue-accept
+| Class: | io.undertow.server.handlers.HttpContinueAcceptingHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that will respond to requests that expect a 100-continue response.
+
+=== IP Access Control Handler
+
+|===
+| Name: | ip-access-control
+| Class: | io.undertow.server.handlers.IPAddressAccessControlHandler
+| Parameters: | acl: String[] (required), default-allow: boolean, failure-status: int
+| Default Parameter | acl
+|===
+
+A handler that provided IP based access control. The ACL list is of the form `{pattern} allow|deny`, where
+{pattern} can be one of the following (both IPv4 and IPv6 are accepted):
+
+* An exact IP address (e.g. 192.168.0.1)
+* An Wildcard IP address (e.g. 192.168.0.*)
+* A Wildcard in slash notation: (e.g. 192.168.0.0/24)
+
+By default anything that is not matched will be denied.
+
+The `failure-status` param allows you to set the response code to be set on failure, `403` will be sent
+by default.
+
+=== JVM Route Handler
+
+|===
+| Name: | jvm-route
+| Class: | io.undertow.server.JvmRouteHandler
+| Parameters: | session-cookie-name: String, value: String (required)
+| Default Parameter | value
+|===
+
+A handler that appends a specified JVM route to session cookie values. This can enable sticky sessions
+for load balancers that support it.
+
+=== Learning Push Handler
+
+|===
+| Name: | learning-push
+| Class: | io.undertow.server.handlers.LearningPushHandler
+| Parameters: | max-age: int, max-entries: int
+| Default Parameter |
+|===
+
+=== Mark Secure Handler
+
+|===
+| Name: | mark-secure
+| Class: | io.undertow.servlet.handlers.MarkSecureHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that will mark a request as secure. This means that `javax.servlet.ServletRequest#isSecure()`
+will return true, and the security layer will consider the request as being sent over a confidential
+channel.
+
+=== Path Separator Handler
+
+|===
+| Name: | path-separator
+| Class: | io.undertow.server.handlers.PathSeparatorHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that only takes effect on windows systems (or other systems that do not use '/' as the path
+separator character). Any instances of the path seperator character in the URL are replaced with a '/'.
+
+=== Proxy Peer Address Handler
+
+|===
+| Name: | proxy-peer-address
+| Class: | io.undertow.server.handlers.ProxyPeerAddressHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that handles `X-Forwarded-*` headers by updating the values on the current exchange to match
+what was sent in the header.
+
+This should only be installed behind a reverse proxy that has been configured to send the `X-Forwarded-*`
+header, otherwise a remote user can spoof their address by sending a header with bogus values.
+
+The headers that are read are:
+
+* `X-Forwarded-For`
+* `X-Forwarded-Proto`
+* `X-Forwarded-Host`
+* `X-Forwarded-Port`
+
+In general either this handler or `proxy-peer-address` handler should be used, they should not both
+be installed at once.
+
+=== Redirect Handler
+
+|===
+| Name: | redirect
+| Class: | io.undertow.server.handlers.RedirectHandler
+| Parameters: | value: ExchangeAttribute (required)
+| Default Parameter | value
+|===
+
+A handler that will redirect to the location specified by value.
+
+=== Request Limiting Handler
+
+|===
+| Name: | request-limit
+| Class: | io.undertow.server.handlers.RequestLimitingHandler
+| Parameters: | requests: int (required)
+| Default Parameter | requests
+|===
+
+A handler that will limit the number of concurrent requests to the limit specified, requests that
+exceed the limit will be queued.
+
+=== Resolve Local Name Handler
+
+|===
+| Name: | resolve-local-name
+| Class: | io.undertow.server.handlers.LocalNameResolvingHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that will resolve the exchange destination address, if it is not already resolved.
+
+=== Resolve Peer Name Handler
+
+|===
+| Name: | resolve-peer-name
+| Class: | io.undertow.server.handlers.PeerNameResolvingHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that will resolve the exchange source address, if it is not already resolved.
+
+
+=== Resource Handler
+
+|===
+| Name: | resource
+| Class: | io.undertow.server.handlers.resource.ResourceHandler
+| Parameters: | allow-listing: boolean, location: String (required)
+| Default Parameter | location
+|===
+
+A handler that will serve files from the local file system at the specified location.
+
+=== Response Code Handler
+
+|===
+| Name: | response-code
+| Class: | io.undertow.server.handlers.ResponseCodeHandler
+| Parameters: | value: int (required)
+| Default Parameter | value
+|===
+
+A handler that sets the specified status code and then ends the exchange.
+
+=== Response Rate Limiting Handler
+
+|===
+| Name: | response-rate-limit
+| Class: | io.undertow.server.handlers.ResponseRateLimitingHandler
+| Parameters: | bytes: int (required), time: long (required)
+| Default Parameter |
+|===
+
+A handler that limits the speed of responses. This speed is set in terms of bytes per time block.
+
+The time block is specified in MS, so if you wanted a limit of 1kb per second you would set
+bytes to 1024 and time to 1000.
+
+=== Restart Handler
+
+|===
+| Name: | restart
+| Class: | N\A
+| Parameters: |
+| Default Parameter |
+|===
+
+A pseudo handler that restarts execution of the current predicated handler block. Care must be taken
+to avoid infinite loops, usually by making sure that the exchange has been modified in such a way
+that it will not end up on the restart handler before calling restart.
+
+=== Reverse Proxy Handler
+
+|===
+| Name: | reverse-proxy
+| Class: | io.undertow.server.handlers.proxy.ProxyHandler
+| Parameters: | hosts: String[] (required), rewrite-host-header: Boolean
+| Default Parameter | hosts
+|===
+
+A handler that will proxy requests to the specified hosts, using round-robin based load balancing.
+
+=== Rewrite Handler
+
+|===
+| Name: | rewrite
+| Class: | io.undertow.server.handlers.SetAttributeHandler
+| Parameters: | value: ExchangeAttribute (required)
+| Default Parameter | value
+|===
+
+A handler that rewrites the current path.
+
+=== Set Attribute Handler
+
+|===
+| Name: | set
+| Class: | io.undertow.server.handlers.SetAttributeHandler
+| Parameters: | attribute: ExchangeAttribute (required), value: ExchangeAttribute (required)
+| Default Parameter |
+|===
+
+A handler that can be used to set any writable attribute on the exchange.
+
+=== Secure Cookie Handler
+
+
+|===
+| Name: | secure-cookie
+| Class: | io.undertow.server.handlers.SecureCookieHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that will mark any cookies that are set over a secure channel as being secure cookies.
+
+=== SSL Headers Handler
+
+|===
+| Name: | ssl-headers
+| Class: | io.undertow.server.handlers.SSLHeaderHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that will set SSL information on the connection based on headers received from the load balancer.
+
+This is for situations where SSL is terminated at the load balancer, however SSL information is still
+required on the back end.
+
+The headers that are read are:
+
+* `SSL_CLIENT_CERT`
+* `SSL_CIPHER`
+* `SSL_SESSION_ID`
+* `SSL_CIPHER_USEKEYSIZE`
+
+This handler should only be used if the front end load balancer is configured to either set or clear these
+headers, otherwise remote users can trick the server into thinking that SSL is in use over a plaintext
+connection.
+
+=== Store Response Header
+
+|===
+| Name: | store-response
+| Class: | io.undertow.server.handlers.StoredResponseHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that reads the full response and stores it in an attachment on the exchange. Generally used
+in combination with the request dumping handler to dump the response body.
+
+=== Stuck Thread Detection Handler
+
+|===
+| Name: | stuck-thread-detector
+| Class: | io.undertow.server.handlers.StuckThreadDetectionHandler
+| Parameters: | threshhold: int
+| Default Parameter | threshhold
+|===
+
+A handler that will print a log message if a request takes longer than the specified number of seconds
+to complete.
+
+=== Trace Handler
+
+|===
+| Name: | trace
+| Class: | io.undertow.server.handlers.HttpTraceHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that responds to HTTP TRACE requests.
+
+=== Uncompress Handler
+
+|===
+| Name: | uncompress
+| Class: | io.undertow.server.handlers.encoding.RequestEncodingHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+A handler that can decompress a content-encoded request. Note that such requests are not part of the
+HTTP standard, and as such represent a non-compatible extension. This will generally used for RPC
+protocols to enabled compressed invocations.
+
+=== URL Decoding Handler
+
+|===
+| Name: | url-decoding
+| Class: | io.undertow.server.handlers.URLDecodingHandler
+| Parameters: | charset: String (required)
+| Default Parameter | charset
+|===
+
+A handler that will decode the request path (including query parameters) into the specified charset. To
+use this handler request decoding must be disabled on the listener.
 
 // end::main[]

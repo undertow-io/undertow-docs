@@ -33,7 +33,7 @@
 
     <groupId>io.undertow.documentation</groupId>
     <artifactId>undertow-documentation</artifactId>
-    <version>1.4.0</version>
+    <version>2.0.0</version>
     <packaging>pom</packaging>
 
     <name>Undertow Documentation</name>
