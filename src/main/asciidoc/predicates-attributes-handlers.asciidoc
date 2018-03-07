@@ -474,6 +474,22 @@ whatever handler is configured after the current predicated handlers block.
 A handler that will dump all relevant details from a request to the log. As this is quite expensive a
 predicate should generally be used to control which requests are dumped.
 
+=== Eager Form Parsing Handler
+
+|===
+| Name: | eager-form-parser
+| Class: | io.undertow.server.handlers.form.EagerFormParsingHandler
+| Parameters: |
+| Default Parameter |
+|===
+
+Handler that eagerly parses form data. The request chain will pause while the data is being read,
+and then continue when the form data is fully passed.
+
+NOTE: This is not strictly compatible with servlet, as it removes the option for the user to
+parse the request themselves. It also removes the option to control the charset that the
+request will be decoded to.
+
 === Error File Handler
 
 |===
