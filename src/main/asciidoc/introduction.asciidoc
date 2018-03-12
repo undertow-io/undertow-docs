@@ -7,7 +7,7 @@ features are:
 
 - High Performance
 - Embeddable
-- Servlet 3.1
+- Servlet 4.0
 - Web Sockets
 - Reverse Proxy
 

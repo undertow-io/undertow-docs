@@ -14,7 +14,7 @@ then you already have Undertow.
 Undertow is built using maven, and is synced to maven central. Undertow provides three seperate artifacts:
 
 Core:: Undertow core, which provides support for non blocking handlers and web sockets
-Servlet:: Support for Servlet 3.1
+Servlet:: Support for Servlet 4.0
 Websockets JSR:: Support for the 'Java API for Websockets (JSR-356)' standard
 
 In order to use Undertow in your maven projects just include the following section in your pom.xml, and set the `undertow.version`
