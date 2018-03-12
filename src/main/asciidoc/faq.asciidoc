@@ -10,7 +10,9 @@ Before we created Undertow we needed multiple web server technologies to meet ou
 
 ==== What JDK does Undertow require?
 
-Java 7 or later.
+Undertow 1.4 and earlier require Java 7 or later.
+
+Undertow 2.0 requires Java 8 or later.
 
 ==== Why am I only seeing one request being processed at a time?
 
