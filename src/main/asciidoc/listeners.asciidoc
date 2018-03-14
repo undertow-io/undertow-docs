@@ -6,10 +6,8 @@ Listeners represent the entry point of an Undertow application. All incoming req
 a listener is responsible for translating a request into an instance of the `HttpServerExchange` object, and then
 turning the result into a response that can be sent back to the client.
 
-Undertow provides 4 built in listener types, HTTP/1.1, AJP, SPDY and HTTP/2. HTTPS is provided by using the HTTP listener
+Undertow provides 4 built in listener types, HTTP/1.1, AJP and HTTP/2. HTTPS is provided by using the HTTP listener
 with an SSL enabled connection.
-
-Note now that HTTP/2 is out it is expected that SPDY will be deprecated and eventually removed.
 
 ==== Options
 
@@ -215,9 +213,8 @@ Depending on the way HTTP/2 is being used the setup for the listeners is slightl
 If you are using the Undertow builder all that is required is to call `setServerOption(ENABLE_HTTP2, true)`, and HTTP/2
 support will be automatically added for all HTTP and HTTPS listeners.
 
-[WARNING]
-JDK8 does not currently support ALPN. To use HTTP/2 over HTTPS it is necessary to use the Jetty ALPN extension on the
-boot class path. Instructions for Jetty ALPN can be found at http://www.eclipse.org/jetty/documentation/9.2.8.v20150217/alpn-chapter.html
+If JDK8 is in use then Undertow will use a reflection based implementation of ALPN that should work with OpenJDK/Oracle
+JDK. If JDK9+ is in use then Undertow will use the ALPN implementation provided by the JDK.
 
 The following options are supported:
 
