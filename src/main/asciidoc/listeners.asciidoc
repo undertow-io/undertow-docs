@@ -6,8 +6,12 @@ Listeners represent the entry point of an Undertow application. All incoming req
 a listener is responsible for translating a request into an instance of the `HttpServerExchange` object, and then
 turning the result into a response that can be sent back to the client.
 
-Undertow provides 4 built in listener types, HTTP/1.1, AJP and HTTP/2. HTTPS is provided by using the HTTP listener
+Undertow provides 3 built in listener types, HTTP/1.1, AJP and HTTP/2. HTTPS is provided by using the HTTP listener
 with an SSL enabled connection.
+
+Undertow also supports version 1 of the proxy protocol, which can be combined with any of the above listener types by
+setting `useProxyProtocol` to true on the listener builder.
+
 
 ==== Options
 

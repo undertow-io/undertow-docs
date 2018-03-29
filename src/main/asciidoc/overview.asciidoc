@@ -17,7 +17,7 @@ the following:
 ==== Management of IO and Worker threads
 
 The XNIO worker manages both the IO threads, and a thread pool that can be used for blocking tasks. In general non-blocking
-handlers will run from withing an IO thread, while blocking tasks such as Servlet invocations will be dispatched to the
+handlers will run from within an IO thread, while blocking tasks such as Servlet invocations will be dispatched to the
 worker thread pool.
 
 IO threads run in a loop. This loop does three things:
