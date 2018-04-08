@@ -44,7 +44,7 @@ this case we do not have any other handlers registered, so this handler is alway
 Response Headers::
 This sets the content type header, which is fairly self explanatory. One thing to note is that Undertow does not use
 `String` as the key for the header map, but rather a case insensitive string `io.undertow.util.HttpString`. The
-`io.undertow.utils.Headers` class contains predefined constants for all common headers.
+`io.undertow.util.Headers` class contains predefined constants for all common headers.
 
 Response Sender::
 The Undertow sender API is just one way of sending a response. The sender will be covered in more detail later, but in
