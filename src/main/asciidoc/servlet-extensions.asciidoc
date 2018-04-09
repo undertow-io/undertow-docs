@@ -12,7 +12,7 @@ Undertow is deploying a Servlet deployment it will load all such services from t
 invoke their `handleDeployment` method.
 
 This method is passed an Undertow `DeploymentInfo` structure, which contains a complete and mutable description of the
-deployment, my modifying this structure it is possible to change any aspect of the deployment.
+deployment, by modifying this structure it is possible to change any aspect of the deployment.
 
 The DeploymentInfo structure is the same structure that is used by the embedded API, so in effect a ServletExtension
 has the same amount of flexibility that you have when using Undertow in embedded mode.
