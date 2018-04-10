@@ -165,11 +165,11 @@ a performance impact, although it should not be noticeable in most cases.
 
 The HTTP/2 connector requires the use of ALPN when running over SSL.
 
-As of Java 9 the JDK supports ALPN nativly, however on previous JDKs different approaches need to be used.
+As of Java 9 the JDK supports ALPN natively, however on previous JDKs different approaches need to be used.
 
 If you are using OpenJDK/Oracle JDK then Undertow contains a workaround that should allow ALPN to work out of the box.
 
-Alternativly you can use the link:https://github.com/wildfly/wildfly-openssl[Wildfly OpenSSL] project to provide ALPN,
+Alternatively you can use the link:https://github.com/wildfly/wildfly-openssl[Wildfly OpenSSL] project to provide ALPN,
 which should also perform better than the JDK SSL implementation.
 
 Another option is to use Jetty ALPN, however it is not recommended as it is no longer tested as part of the Undertow
@@ -212,7 +212,7 @@ layer protocol negotiation SSL extension to negotiate that connection will use H
 
 Prior Knowledge::
 This involves the client simply sending a HTTP/2 connection preface and assuming the server will support it. This is not
-generally used on the open internet, but it useful for things like load balancers when you know the backend server will
+generally used on the open internet, but it's useful for things like load balancers when you know the backend server will
 support HTTP/2.
 
 HTTP Upgrade::

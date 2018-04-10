@@ -2,7 +2,7 @@
 
 === Using non-blocking handlers with servlet
 
-When using servlet deployments in Undertow is is possible to mix and match servlets and Undertow native handlers.
+When using servlet deployments in Undertow it is possible to mix and match servlets and Undertow native handlers.
 
 This is achieved via the `io.undertow.servlet.ServletExtension` interface. This interface allows you to customise
 a servlet deployment before it is deployed, including wrapping the servlet handler chain with your own handlers.
@@ -19,11 +19,12 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.spec.ServletContextImpl;
+
+import javax.servlet.ServletContext;
 
 public class NonBlockingHandlerExtension implements ServletExtension {
     @Override
-    public void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext) {
+    public void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContext servletContext) {
         deploymentInfo.addInitialHandlerChainWrapper(new HandlerWrapper() {
             @Override
             public HttpHandler wrap(final HttpHandler handler) {
@@ -85,7 +86,7 @@ these handlers.
 ----
 public class NonBlockingHandlerExtension implements ServletExtension {
     @Override
-    public void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext) {
+    public void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContext servletContext) {
         deploymentInfo.addInitialHandlerChainWrapper(new HandlerWrapper() {
             @Override
             public HttpHandler wrap(final HttpHandler handler) {
