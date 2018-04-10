@@ -54,7 +54,7 @@ returned directly, with no need to allocate a String or a StringBuilder.
 performance boost with a real workload. If not then we may want to move to a
 simpler parser to avoid the extra complexity.
 
-Other protocols such as HTTPS, AJP and SPDY etc support will be provided
+Other protocols such as HTTPS, AJP and HTTP/2 etc support will be provided
 through Channel implementation that as much as possible abstract away the
 details of the underlying protocol to the handlers.
 

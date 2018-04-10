@@ -40,7 +40,6 @@ underlying wire protocol. By default Undertow ships with 5 different listeners:
 - HTTP/1.1
 - HTTPS
 - AJP
-- SPDY (deprecated)
 - HTTP/2
 
 These listeners will generally do all IO in an IO thread using async IO. When a request has been fully parsed they will

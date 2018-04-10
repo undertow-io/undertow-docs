@@ -163,11 +163,18 @@ a performance impact, although it should not be noticeable in most cases.
 
 `io.undertow.server.protocol.http.AlpnOpenListener`
 
-Note that the HTTP2 and SPDY connectors require the use of ALPN. Unfortunatly java does not provide a standard way of performing
-ALPN at this time, so it is necessary to run java with a 3rd party ALPN library on the boot class path. For more information
-see the link:http://eclipse.org/jetty/documentation/current/alpn-chapter.html[Jetty ALPN documentation].
+The HTTP/2 connector requires the use of ALPN when running over SSL.
 
-SPDY and HTTP2 should use the ALPN open listener to handle the ALPN protocol negotiation.
+As of Java 9 the JDK supports ALPN nativly, however on previous JDKs different approaches need to be used.
+
+If you are using OpenJDK/Oracle JDK then Undertow contains a workaround that should allow ALPN to work out of the box.
+
+Alternativly you can use the link:https://github.com/wildfly/wildfly-openssl[Wildfly OpenSSL] project to provide ALPN,
+which should also perform better than the JDK SSL implementation.
+
+Another option is to use Jetty ALPN, however it is not recommended as it is no longer tested as part of the Undertow
+test suite. For more information see the link:http://eclipse.org/jetty/documentation/current/alpn-chapter.html[Jetty ALPN documentation].
+
 
 ==== HTTP Listener
 
@@ -240,12 +247,5 @@ The maximum frame size.
 
 HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE::
 The maximum size of the headers that this server is prepared to accept.
-
-==== SPDY Listener
-
-`io.undertow.server.protocol.spdy.SpdyOpenListener`
-
-The SPDY protocol is an experimental protocol designed by Google, that formed the basis of HTTP2. Now that HTTP2 has been
-adopted by browser vendors it should be used instead.
 
 // end::main[]

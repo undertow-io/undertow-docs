@@ -3,11 +3,10 @@ digraph example {
 	shape="box";
 
     http[label="Http Connector", shape=box];
-    http_persistent_connection[label="HTTP persistent connection handler"];
     virtual_host[label="Virtual host handler"];
 
     https[label="Https Connector", shape=box];
-    spdy[label="SPDY Connector", shape=box];
+    http2[label="HTTP/2 Connector", shape=box];
 
     simple_error_page[label="Simple Error Page Handler"];
 
@@ -22,9 +21,9 @@ digraph example {
     servlet_dispatch_handler1[label="Servlet Dispatch Handler1"];
 
 
-    http -> http_persistent_connection -> simple_error_page;
-    https -> http_persistent_connection;
-    spdy -> simple_error_page;
+    http -> simple_error_page;
+    https -> simple_error_page;
+    http2 -> simple_error_page;
     simple_error_page -> virtual_host;
 
     virtual_host -> response_404 [label="No Host: match"];
