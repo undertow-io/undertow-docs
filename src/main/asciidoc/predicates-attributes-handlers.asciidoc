@@ -632,7 +632,7 @@ The headers that are read are:
 * `X-Forwarded-Host`
 * `X-Forwarded-Port`
 
-In general either this handler or `proxy-peer-address` handler should be used, they should not both
+In general either this handler or `forwarded` handler should be used, they should not both
 be installed at once.
 
 === Redirect Handler
