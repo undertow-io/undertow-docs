@@ -241,11 +241,11 @@ The complete list of built in predicates is shown below:
 |Name           | Parameters  | Default Parameter | Additional context
 |auth-required	|	|	|
 |contains	|search: String[] (required), value: attribute (required)	|	|
-|directory	|value: attribute	|value	|
+|directory	|value: attribute	|value	| Only usable via undertow-handlers.conf
 |dispatcher	|value: String (required)	|value	|
 |equals	|value: attribute[] (required)	|value	|
 |exists	|value: attribute (required)	|value	|
-|file	|value: attribute	|value	|
+|file	|value: attribute	|value	| Only usable via undertow-handlers.conf
 |max-content-size	|value: Long (required)	|value	|
 |method	|value: String[] (required)	|value	|
 |min-content-size	|value: Long (required)	|value	|
