@@ -1,6 +1,6 @@
 // tag::main[]
 
-=== Undertow Request Lifecyle
+=== Undertow Request Lifecycle
 
 This document covers the lifecycle of a web request from the point of view of the Undertow server.
 
