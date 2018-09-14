@@ -14,7 +14,7 @@ public class HelloWorldServer {
 
     public static void main(final String[] args) {
         Undertow server = Undertow.builder()                                                    //Undertow builder
-                .addListener(8080, "localhost")                                                 //Listener binding
+                .addHttpListener(8080, "localhost")                                             //Listener binding
                 .setHandler(new HttpHandler() {                                                 //Default Handler
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -31,7 +31,7 @@ public class HelloWorldServer {
 For the most part this is all fairly self explanatory:
 
 The Undertow Builder::
-This API enables you to quickly configure and launch an Undertow server. It is intended for use is embedded and testing
+This API enables you to quickly configure and launch an Undertow server. It is intended for use in embedded and testing
 environments. At this stage the API is still subject to change.
 
 Listener Binding::
@@ -62,7 +62,7 @@ a request it is parsed by the Undertow parser, and then the resulting `io.undert
 to the root handler. When the root handler finishes one of 4 things can happen:
 
 The exchange can be already completed::
-And exchange is considered complete if both request and response channels have been fully read/written. For requests
+An exchange is considered complete if both request and response channels have been fully read/written. For requests
 with no content (such as GET and HEAD) the request side is automatically considered fully read. The read side is considered
 complete when a handler has written out the full response and closed and fully flushed the response channel. If an exchange
 is already complete then no action is taken, as the exchange is finished.
@@ -125,7 +125,7 @@ buffer size on Linux).
 ==== Non-blocking IO
 
 By default Undertow uses non-blocking XNIO channels, and requests initially start off in an XNIO IO thread. These channels
-can be used directly to send a receive data. These channels are quite low level however, so to that end Undertow provides
+can be used directly to send and receive data. These channels are quite low level however, so to that end, Undertow provides
 some abstractions to make using them a little bit easier.
 
 The easiest way to send a response using non-blocking IO is to use the sender API as shown above. It contains several
@@ -155,7 +155,7 @@ does not take any parameters which will use Undertow's default stream implementa
 streams that are in use. For example the servlet implementation uses the second method to replace Undertow's default
 streams with Servlet(Input/Output)Stream implementations.
 
-Once the exchange has been but into blocking mode you can now call `HttpServerExchange.getInputStream()` and
+Once the exchange has been put into blocking mode you can now call `HttpServerExchange.getInputStream()` and
 `HttpServerExchange.getOutputStream()`, and write data to them as normal. You can also still use the sender API
 described above, however in this case the sender implementation will use blocking IO.
 
