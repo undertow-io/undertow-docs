@@ -4,7 +4,7 @@
 === Error Handling
 
 
-Error handling is accomplished by through the use of default response listeners. These are listeners that can generate
+Error handling is accomplished through the use of default response listeners. These are listeners that can generate
 a response if the exchange is ended without a response being sent.
 
 NOTE: This is completely different to Servlet error handling. Servlet error handling is implemented as part of Undertow
@@ -35,7 +35,7 @@ public class ErrorHandler implements HttpHandler {
 }
 ----
 
-The allows you application to handle exceptions in whatever manner you see fit.
+The allows your application to handle exceptions in whatever manner you see fit.
 
 If the exception propagates out of the handler chain a 500 response code will be set and the exchange can be ended.
 
