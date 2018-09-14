@@ -5,7 +5,7 @@
 Undertow has a flexible security architecture that provides several built in authentication mechanisms,
 as well as providing an API to allow you to provide custom mechanisms. Mechanisms can be combined (as
 much as the relevant specifications allow). This document covers the details of the core Undertow
-security API. For details on how these are used in servlet deployments see link:../servlet/security.html[Servlet Security].
+security API. For details on how these are used in servlet deployments see link:servlet-security.html[Servlet Security].
 
 ==== The SecurityContext
 

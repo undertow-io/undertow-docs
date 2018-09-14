@@ -69,7 +69,7 @@ These extensions are discovered via the standard META-INF/services discovery mec
 provides a custom authentication mechanism all that should be required is to add this jar to your deployment and
 then specify the mechanism name in web.xml.
 
-For more info see the link:servlet-extensions.html:[Servlet extensions guide].
+For more info see the link:servlet-extensions.html[Servlet extensions guide].
 
 
 // end::main[]
