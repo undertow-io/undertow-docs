@@ -259,7 +259,7 @@ The complete list of built in predicates is shown below:
 
 ==== Textual Representation of Handlers
 
-Handlers are represented in a similar way to predicates. Handlers are predicates are combined into the Undertow predicate
+Handlers are represented in a similar way to predicates. Handlers and predicates are combined into the Undertow predicate
 language.
 
 The general form of this language is `predicate -> handler`. If the predicate evaluates to true the handler is executes.
