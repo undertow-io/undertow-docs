@@ -133,7 +133,7 @@ versions of the `send()` method for both `byte` and `String` data. Some versions
 invoked when the send is complete, other versions do not take a callback and instead end the exchange when the send is
 complete.
 
-Note that the sender API does not support queueing, you may not call `send()` again until after the callback has been
+Note that the sender API does not support queuing, you may not call `send()` again until after the callback has been
 notified.
 
 When using versions of the `send()` method that do not take a callback the `Content-Length` header will be automatically
@@ -151,7 +151,7 @@ The code to dispatch to a worker thread can be found xref:dispatch-code[above].
 
 To begin blocking IO call `HttpServerExchange.startBlocking()`. There are two versions of this method, the one which
 does not take any parameters which will use Undertow's default stream implementations, and
-`HttpServerExchange.startBlocking(BlockingHttpServerExchange blockingExchange)` which allows you to customise the
+`HttpServerExchange.startBlocking(BlockingHttpServerExchange blockingExchange)` which allows you to customize the
 streams that are in use. For example the servlet implementation uses the second method to replace Undertow's default
 streams with Servlet(Input/Output)Stream implementations.
 

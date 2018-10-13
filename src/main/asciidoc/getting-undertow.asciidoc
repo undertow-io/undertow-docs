@@ -11,7 +11,7 @@ then you already have Undertow.
 
 ==== Maven
 
-Undertow is built using maven, and is synced to maven central. Undertow provides three seperate artifacts:
+Undertow is built using maven, and is synced to maven central. Undertow provides three separate artifacts:
 
 Core:: Undertow core, which provides support for non blocking handlers and web sockets
 Servlet:: Support for Servlet 4.0

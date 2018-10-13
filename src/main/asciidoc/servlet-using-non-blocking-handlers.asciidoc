@@ -64,7 +64,7 @@ allow you to add additional handlers before the servlet handler.
 
 In our wrapper we create an `io.undertow.server.handlers.PathHandler`, which is a handler provided by undertow that
 maps handlers to paths. We register two different handlers into the path handler, our custom handler under `/hello`,
-and the servlet handler under `/`. These paths are relative to the root of the servlet context (techinically they are
+and the servlet handler under `/`. These paths are relative to the root of the servlet context (technically they are
 relative to the last resolved path, so if you chain two path handlers together the second paths will be resolved relative
 to the first one).
 

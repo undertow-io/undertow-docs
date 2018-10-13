@@ -41,7 +41,7 @@ not be covered in this guide, instead this will focus on the elements that are U
 
 ==== Handler Chain Wrappers
 
-Hander chain wrappers allow you to insert additional `HttpHandlers` into the Servlet chain, there are three methods that
+Handler chain wrappers allow you to insert additional `HttpHandlers` into the Servlet chain, there are three methods that
 allow you to do this:
 
 addInitialHandlerChainWrapper():: This allows you to add a handler that is run before all other Servlet handlers. If

@@ -103,7 +103,7 @@ that mechanism and switch to an alternative mechanism so all challenges need to 
 
 If the list of mechanisms was exhausted then the previously set authentication constraint needs to be checked, if authentication was
 not required then the request can proceed to the next handler in the chain and that will be then of authentication for this request
-(unless a later handler mandates authentication and requests authentication is re-atempted).  If however authentication was required
+(unless a later handler mandates authentication and requests authentication is re-attempted).  If however authentication was required
 then as with a `NOT_AUTHENTICATED` response each mechanism has `sendChallenge` called in turn to generate an authentication challenge
 to send to the client.
 

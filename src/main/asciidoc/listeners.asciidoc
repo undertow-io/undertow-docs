@@ -73,7 +73,7 @@ to unlimited.
 MULTIPART_MAX_ENTITY_SIZE::
 
 The default max entity size when using the Multipart parser. This will generally be larger than `MAX_ENTITY_SIZE`. Having
-a seperate setting for this allows for large files to be uploaded, while limiting the size of other requests.
+a separate setting for this allows for large files to be uploaded, while limiting the size of other requests.
 
 MAX_PARAMETERS::
 
@@ -191,7 +191,7 @@ to the listener with a HTTP/2 connection preface then the HTTP/2 protocol will b
 
 `io.undertow.server.protocol.ajp.AjpOpenListener`
 
-The AJP listener allows the use of the AJP protocol, as used by the apache modules mod_jk and mod_proxy_ajp. It is a binary
+The AJP listener allows the use of the AJP protocol, as used by the Apache modules mod_jk and mod_proxy_ajp. It is a binary
 protocol that is slightly more efficient protocol than HTTP, as some common strings are replaced by integers. If the front
 end load balancer supports it then it is recommended to use HTTP2 instead, as it is both a standard protocol and more efficient.
 

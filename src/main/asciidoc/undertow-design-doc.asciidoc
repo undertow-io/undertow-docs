@@ -15,7 +15,7 @@ The handlers can also hand off to blocking handlers backed by a thread pool.
 
 This architecture is designed to give the end user complete flexibility when
 configuring the server. For instance if the user simply wants to server up
-static files, then they can confiure a server with only the handlers that are
+static files, then they can configure a server with only the handlers that are
 required for that task.
 
 An example handler chain could be as follows:
@@ -26,7 +26,7 @@ image::example.png["An Example Handler Chain",title="An Example Handler Chain"]
 Servlet functionality will be built on top of the async server core. The
 servlet module will integrate with the core by providing its own handlers for
 servlet specific functionality. As much as possible the servlet implementation
-will use async handlers, only changing to blocking handlers when absolutly
+will use async handlers, only changing to blocking handlers when absolutely
 required. This means that static resources packaged in a servlet will be
 served up via async IO.
 
@@ -161,8 +161,8 @@ Servlet
 Undertow Servlet Core
 ~~~~~~~~~~~~~~~~~~~~~
 
-The core servlet code will reside in the undertow respository, with the
-EE integration code residing in the AS7. Core servlet code is loosly defined
+The core servlet code will reside in the undertow repository, with the
+EE integration code residing in the AS7. Core servlet code is loosely defined
 as the following functionality:
 
 - Lifecycle management
@@ -244,17 +244,17 @@ is called this metadata is used to construct the appropriate handler chains.
 JBoss Application Server Integration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Initially this integration will be provided by a seperate module maintained in
+Initially this integration will be provided by a separate module maintained in
 the Undertow organisation. This will provide an AS7 subsystem and an installer
 (ala Torquebox, Immutant etc) that will add the subsystem to an existing AS7
 instance. There are several reasons why this will be developed outside the AS7
 repository:
 
-- Removes the potential for conflicts. If we were developing in a seperate AS7
+- Removes the potential for conflicts. If we were developing in a separate AS7
 branch we would either need to use merge commits or frequest rebases to keep
 up with the AS7 tree, neither of which are particularly desirable option. -
 Shorter build times. AS7 takes around an hour to build and fully test,
-keeping this in a different repo initialy will make build/test times a lot
+keeping this in a different repo initially will make build/test times a lot
 shorter.
 
 - Easy of user adoption. This approach will make it much easier for AS7 users
