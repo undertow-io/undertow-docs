@@ -30,7 +30,7 @@ and also for holding the configured mechanisms for authentication (`Authenticati
 methods to work with both of these. As this `SecurityContext` is replacable a general configuration
 can be applied to a complete server with custom configuration replacing it later in the call.
 
-After the `SecurityContext` has been established subseqeunt handlers can then add authentication mechanisms
+After the `SecurityContext` has been established subsequent handlers can then add authentication mechanisms
 to the context, to simplify this Undertow contains a handler called `AuthenticationMechanismsHandler`
 this handler can be created with a set of `AuthenticationMechanism` mechanisms and will set them all on the
 established `SecurityContext`.  Alternatively custom handlers could be used to add mechanisms one at a time
