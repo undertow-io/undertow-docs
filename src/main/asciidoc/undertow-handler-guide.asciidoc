@@ -10,6 +10,11 @@ Lets start with a simple example:
 
 [source%nowrap,java]
 ----
+import io.undertow.Undertow;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+
 public class HelloWorldServer {
 
     public static void main(final String[] args) {
