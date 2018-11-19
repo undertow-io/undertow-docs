@@ -141,7 +141,7 @@ attributes provided by Undertow is below:
 |Local IP address                                                             | `%A`     | `%{LOCAL_IP}`
 |Bytes sent, excluding HTTP headers, or '-' if no bytes were sent             | `%b`     |
 |Bytes sent, excluding HTTP headers                                           | `%B`     | `%{BYTES_SENT}`
-|Remote host name                                                             | `%h`     |
+|Remote host name                                                             | `%h`     | `%{REMOTE_HOST}`
 |Request protocol                                                             | `%H`     | `%{PROTOCOL}`
 |Remote logical username from identd (always returns '-')                     | `%l`     |
 |Request method                                                               | `%m`     | `%{METHOD}`
@@ -156,6 +156,8 @@ attributes provided by Undertow is below:
 |Local server name                                                            | `%v`     | `%{LOCAL_SERVER_NAME}`
 |Time taken to process the request, in millis                                 | `%D`     | `%{RESPONSE_TIME}`
 |Time taken to process the request, in seconds                                | `%T`     |
+|Time taken to process the request, in micros                                 |          | `%{RESPONSE_TIME_MICROS}`
+|Time taken to process the request, in nanos                                  |          | `%{RESPONSE_TIME_NANOS}`
 |Current request thread name                                                  | `%I`     | `%{THREAD_NAME}`
 |SSL cypher                                                                   |          | `%{SSL_CIPHER}`
 |SSL client certificate                                                       |          | `%{SSL_CLIENT_CERT}`
