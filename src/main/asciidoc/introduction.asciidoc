@@ -14,7 +14,7 @@ features are:
 There are two main ways that Undertow can be used, either by directly embedding it in your code, or as part of the
 link:http://wildfly.org[Wildfly Application Server]. This guide mostly focuses on the embedded API's, although a lot
 of the content is still relevant if you are using Wildfly, it is just that the relevant functionality will generally
-be exposed via XML configuration rather than programatic configuration.
+be exposed via XML configuration rather than programmatic configuration.
 
 The documentation is broken up into two parts, the first part focuses on Undertow code, while the second focuses on
 Servlet.

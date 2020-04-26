@@ -24,7 +24,7 @@ For example:
 
 The mechanisms will be tried in the order that they are listed. In the example silent basic auth will be tried first,
 which is basic auth that only takes effect if an +Authorization+ header is present. If no such header is present then
-form auth will be used instead. This will allow programatic clients to use basic auth, while users connecting
+form auth will be used instead. This will allow programmatic clients to use basic auth, while users connecting
 via a browser can use form based auth.
 
 The built it list of mechanisms and the properties they take are as follows:

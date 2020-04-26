@@ -230,7 +230,7 @@ for example:
 $undertow.alias("ds", "jndi:java:jboss/datasources/ExampleDS");
 ----
 
-Note that alises can not have a type specifier.
+Note that aliases can not have a type specifier.
 
 Note that this injection support is pluggable, and can be extended by implementing `io.undertow.js.InjectionProvider`,
 and adding the implementing class to `META-INF/services/io.undertow.js.InjectionProvider`.

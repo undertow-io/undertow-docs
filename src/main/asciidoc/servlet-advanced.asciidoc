@@ -19,7 +19,7 @@ There are three possible places where a handler can be inserted:
 
 Before the Servlet Chain::
 
-This happens before any Servlet handlers are invoked, and handlers inserted here have the option of completly bypassing
+This happens before any Servlet handlers are invoked, and handlers inserted here have the option of completely bypassing
 Servlet altogether. Some possible use cases include serving static files directly without any Servlet overhead, or
 performing some kind of request re-writing before Servlet is invoked. To add a wrapper here use
 `DeploymentInfo.addInitialHandlerChainWrapper(HandlerWrapper wrapper)`.
@@ -76,7 +76,8 @@ two and uses chunked encoding.
 
 To work around this poor practice Undertow provides an option to ignore flushes on the ServletOutputStream. This can
 be activated by calling `DeploymentInfo.setIgnoreFlush(true)`. Even though `flush()` will no longer flush to the
-client when this is enabled Undertow will still treat the response as commited and not allow modification of the headers.
+client when this is enabled Undertow will still treat the response as committed and not allow modification of the
+headers.
 
 
 // end::main[]
