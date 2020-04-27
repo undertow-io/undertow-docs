@@ -18,11 +18,6 @@ Undertow 2.0 requires Java 8 or later.
 
 Some browsers share connections between tabs, so even if you have opened another tab the second tab will not load until the first tab has completed.
 
-
-==== When will Undertow be included in JBoss EAP?
-
-Undertow is currently planned for EAP7, which will be based on a future WildFly release. It can be used today on its own or within WindFly 8.
-
 ==== What license is Undertow under?
 
 Undertow is licensed under the Apache License, Version 2.0.
