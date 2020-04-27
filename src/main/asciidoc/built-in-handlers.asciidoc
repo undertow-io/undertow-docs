@@ -22,7 +22,7 @@ Path Template::
 
 Similar to the path handler, however the path template handler allows you to use URI template expressions in the path,
 for example /rest/{name}. The value of the relevant path template items are stored as an attachment on the exchange,
-under the `io.undertow.server.handlers.PathTemplateHandler#PATH_TEMPLATE_MATCH` attachment key.
+under the `io.undertow.util.PathTemplateMatch#ATTACHMENT_KEY` attachment key.
 
 Resource::
 
