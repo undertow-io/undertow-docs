@@ -107,7 +107,7 @@ dispatch) in between the first and second thread access.
 
 ==== Ending the exchange
 
-As mentioned above, and exchange is considered done once both the request and response channels have been closed and flushed.
+As mentioned above, an exchange is considered done once both the request and response channels have been closed and flushed.
 
 There are two ways to end an exchange, either by fully reading the request channel, and calling `shutdownWrites()` on the
 response channel and then flushing it, or by calling `HttpServerExchange.endExchange()`. When `endExchange()` is called
