@@ -2,7 +2,7 @@
 
 === Built in Handlers
 
-Undertow contains a number of build in handlers that provide common functionality. Most of these handlers can be created
+Undertow contains a number of built in handlers that provide common functionality. Most of these handlers can be created
 using static methods on the `io.undertow.Handlers` utility class.
 
 The most common of these handlers are detailed below.
@@ -41,7 +41,7 @@ There are multiple handlers that deal with requests that expect a HTTP 100 Conti
 Handler will automatically send a continue response for requests that require it the first time a handler attempts to
 read the request body.
 The HTTP Continue Accepting handler will immediately either send a 100 or a 417 response depending on the value of a
-predicate. If no predicate is supplied it all immediately accept all requests. If a 417 response code is send the
+predicate. If no predicate is supplied it will immediately accept all requests. If a 417 response code is sent the
 next handler is not invoked and the request will be changed to be non persistent.
 
 Websocket::
