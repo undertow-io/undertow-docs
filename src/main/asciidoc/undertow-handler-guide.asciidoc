@@ -100,14 +100,14 @@ public void handleRequest(final HttpServerExchange exchange) throws Exception {
 }
 ----
 
-Because exchange is not actually dispatched until the call stack returns you can be sure that more that one thread is
+Because exchange is not actually dispatched until the call stack returns you can be sure that more than one thread is
 never active in an exchange at once. The exchange is not thread safe, however it can be passed between multiple threads
 as long as both threads do not attempt to modify it at once, and there is a happens before action (such as a thread pool
 dispatch) in between the first and second thread access.
 
 ==== Ending the exchange
 
-As mentioned above, and exchange is considered done once both the request and response channels have been closed and flushed.
+As mentioned above, an exchange is considered done once both the request and response channels have been closed and flushed.
 
 There are two ways to end an exchange, either by fully reading the request channel, and calling `shutdownWrites()` on the
 response channel and then flushing it, or by calling `HttpServerExchange.endExchange()`. When `endExchange()` is called
